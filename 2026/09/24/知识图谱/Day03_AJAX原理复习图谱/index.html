@@ -1,0 +1,399 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Welcome to PP' blog | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Day03 AJAX原理 复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body { font-family: -apple-system, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif;     background: #f5f7fa; color: #2c3e50; p">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Welcome to PP&#39; blog">
+<meta property="og:url" content="https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="Day03 AJAX原理 复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body { font-family: -apple-system, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif;     background: #f5f7fa; color: #2c3e50; p">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover2.svg">
+<meta property="article:published_time" content="2026-09-24T12:16:55.625Z">
+<meta property="article:modified_time" content="2026-09-24T12:16:55.626Z">
+<meta property="article:author" content="PP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover2.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "",
+  "url": "https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/",
+  "image": "https://quanpp.github.io/img/cover2.svg",
+  "datePublished": "2026-09-24T12:16:55.625Z",
+  "dateModified": "2026-09-24T12:16:55.626Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Welcome to PP\' blog',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/cover2.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Welcome to PP' blog</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">无标题</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-09-24T12:16:55.625Z" title="发表于 2026-09-24 20:16:55">2026-09-24</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-09-24T12:16:55.626Z" title="更新于 2026-09-24 20:16:55">2026-09-24</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Day03 AJAX原理 复习图谱</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f7fa; color: #2c3e50; padding: 24px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; text-align: center; margin-bottom: 6px; }
+  .sub { text-align:center; color:#7f8c8d; font-size:14px; margin-bottom:28px; }
+  .card { background:#fff; border-radius:12px; padding:22px 26px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:22px; }
+  .card h2 { font-size:18px; margin-bottom:14px; padding-left:10px; border-left:4px solid #e67e22; }
+  .card h2 .tag { font-size:12px; color:#fff; background:#e67e22; border-radius:4px; padding:2px 8px; margin-left:8px; vertical-align:middle; font-weight:normal;}
+  code { background:#f4f6f8; padding:1px 5px; border-radius:3px; font-size:12.5px; color:#c0392b; }
+  pre { background:#2c3e50; color:#ecf0f1; padding:14px 16px; border-radius:8px;
+    font-size:12.5px; line-height:1.7; overflow-x:auto; margin:10px 0; }
+  pre .cm { color:#95a5a6; }
+  pre .kw { color:#f39c12; }
+  pre .str { color:#2ecc71; }
+
+  .steps { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0; }
+  .step { flex:1; min-width:140px; background:#fef5e7; border-radius:8px; padding:12px; text-align:center; font-size:13px; }
+  .step .n { display:inline-block; width:22px; height:22px; line-height:22px; border-radius:50%;
+    background:#e67e22; color:#fff; font-size:12px; margin-bottom:6px; }
+  .arrow { display:flex; align-items:center; color:#e67e22; font-size:20px; font-weight:bold; }
+
+  .state-row { display:flex; gap:14px; margin:12px 0; }
+  .state { flex:1; border-radius:10px; padding:14px; text-align:center; color:#fff; }
+  .state.pending { background:#95a5a6; }
+  .state.fulfilled { background:#27ae60; }
+  .state.rejected { background:#c0392b; }
+  .state .sname { font-size:15px; font-weight:bold; margin-bottom:4px; }
+  .state .sdesc { font-size:12px; opacity:.9; }
+  .state .sthen { font-size:12px; margin-top:6px; background:rgba(255,255,255,.2); border-radius:4px; padding:2px 6px; display:inline-block;}
+
+  table { width:100%; border-collapse:collapse; font-size:13.5px; margin-top:6px;}
+  th,td { border:1px solid #e1e8ed; padding:8px 10px; text-align:left;}
+  th { background:#f0f4f8; }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .kv { font-size:13.5px; }
+  .kv li { margin-bottom:8px; list-style:none; padding-left:18px; position:relative;}
+  .kv li::before { content:"▸"; position:absolute; left:0; color:#e67e22; }
+  .highlight { background:#fff8e1; border-left:4px solid #f39c12; padding:10px 14px; border-radius:0 8px 8px 0; font-size:13.5px; margin-top:10px;}
+  .note { font-size:12.5px; color:#7f8c8d; margin-top:8px; }
+  .vs { background:#e8f8f5; border-radius:10px; padding:14px; margin:8px 0; font-size:13.5px;}
+  .vs b { color:#16a085; }
+  @media(max-width:760px){ .two-col{grid-template-columns:1fr;} .state-row{flex-direction:column;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Day03 AJAX 原理 · 复习图谱</h1>
+  <div class="sub">主线：XHR 原生语法 → Promise 管理异步 → 手写 myAxios → 天气预报实战</div>
+
+  <!-- 1. 核心认知 -->
+  <div class="card">
+    <h2>一、先搞懂：axios 和 XHR 是什么关系</h2>
+    <div class="vs">
+      <b>axios</b> = 封装好的工具库，你只传 <code>url / method / params / data</code> 就行<br>
+      <b>XHR</b> = 浏览器原生提供的对象，是 axios 内部真正干活的人<br>
+      <b>Promise</b> = 管理异步任务状态的对象，让 XHR 结果能用 <code>.then()</code> 接收<br>
+      <span style="color:#7f8c8d">一句话：axios = XHR + Promise + 一堆自动帮你做的事（拼参数、转 JSON、设请求头）</span>
+    </div>
+  </div>
+
+  <!-- 2. XHR 四步 -->
+  <div class="card">
+    <h2>二、原生 XHR 的四步固定流程</h2>
+    <div class="steps">
+      <div class="step"><span class="n">1</span><b>创建对象</b><br><code>new XMLHttpRequest()</code></div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="n">2</span><b>配置请求</b><br><code>xhr.open('GET', url)</code></div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="n">3</span><b>监听结果</b><br><code>xhr.onloadend = () => {...}</code></div>
+      <div class="arrow">→</div>
+      <div class="step"><span class="n">4</span><b>发起请求</b><br><code>xhr.send()</code></div>
+    </div>
+    <div class="highlight">
+      <b>关键区别（和 axios 比，XHR 啥都得自己干）：</b><br>
+      • 查询参数：axios 自动把 <code>params</code> 拼到 URL 后面；XHR 要自己拼 <code>?pname=辽宁&cname=大连</code><br>
+      • 提交数据：axios 自动把 <code>data</code> 转 JSON 字符串；XHR 要 <code>JSON.stringify()</code> + <code>setRequestHeader('Content-Type','application/json')</code> + <code>xhr.send(字符串)</code><br>
+      • 响应结果：axios 自动解析 JSON；XHR 拿到的是 <code>xhr.response</code> 字符串，要自己 <code>JSON.parse()</code>
+    </div>
+  </div>
+
+  <!-- 3. URLSearchParams -->
+  <div class="card">
+    <h2>三、URLSearchParams：自动拼查询参数</h2>
+    <p style="font-size:13.5px">多个查询参数手动拼字符串太麻烦，用它把对象转成 <code>key=value&key=value</code> 格式：</p>
+<pre><span class="cm">// 把参数对象 → 查询参数字符串</span>
+<span class="kw">const</span> paramsObj = <span class="kw">new</span> URLSearchParams({
+  pname: <span class="str">'辽宁省'</span>,
+  cname: <span class="str">'大连市'</span>
+})
+<span class="kw">const</span> queryString = paramsObj.toString()
+<span class="cm">// 结果: "pname=辽宁省&cname=大连市"</span>
+
+xhr.open(<span class="str">'GET'</span>, <span class="str">`http://xxx/api/area?${queryString}`</span>)</pre>
+    <div class="note">这就是 myAxios 里 <code>config.params</code> 那一步内部干的事。</div>
+  </div>
+
+  <!-- 4. Promise 三种状态 -->
+  <div class="card">
+    <h2>四、Promise 的三种状态（必背）</h2>
+    <div class="state-row">
+      <div class="state pending">
+        <div class="sname">pending 待定</div>
+        <div class="sdesc">初始状态，任务正在进行中</div>
+      </div>
+      <div class="state fulfilled">
+        <div class="sname">fulfilled 已兑现</div>
+        <div class="sdesc">任务成功完成</div>
+        <div class="sthen">触发 .then() 回调</div>
+      </div>
+      <div class="state rejected">
+        <div class="sname">rejected 已拒绝</div>
+        <div class="sdesc">任务失败</div>
+        <div class="sthen">触发 .catch() 回调</div>
+      </div>
+    </div>
+    <div class="highlight">
+      <b>死规则：</b>Promise 一旦从 pending 变成 fulfilled 或 rejected，<b>状态就永久凝固，不能再变</b>。<br>
+      <b>怎么判断请求成功？</b>看 <code>xhr.status</code> 状态码，<b>200~299 之间就是成功</b>，否则失败。
+    </div>
+  </div>
+
+  <!-- 5. myAxios 内部结构 -->
+  <div class="card">
+    <h2>五、手写 myAxios：拆开看 axios 内部干了啥</h2>
+    <p style="font-size:13.5px; margin-bottom:8px">myAxios 函数做了 4 件事，正好对应你平时用 axios 传的 4 个配置项：</p>
+<pre><span class="kw">function</span> myAxios(config) {
+  <span class="kw">return new</span> Promise((resolve, reject) => {
+    <span class="kw">const</span> xhr = <span class="kw">new</span> XMLHttpRequest()
+
+    <span class="cm">// ① params: 有查询参数就用 URLSearchParams 拼到 url 后面</span>
+    <span class="kw">if</span> (config.params) {
+      <span class="kw">const</span> qs = <span class="kw">new</span> URLSearchParams(config.params).toString()
+      config.url += <span class="str">`?${qs}`</span>
+    }
+
+    <span class="cm">// ② method: 默认 GET</span>
+    xhr.open(config.method || <span class="str">'GET'</span>, config.url)
+
+    xhr.addEventListener(<span class="str">'loadend'</span>, () => {
+      <span class="cm">// ④ 成功/失败判断：200~299 resolve，否则 reject</span>
+      <span class="kw">if</span> (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.response))
+      } <span class="kw">else</span> {
+        reject(<span class="kw">new</span> Error(xhr.response))
+      }
+    })
+
+    <span class="cm">// ③ data: 有请求体就转 JSON 字符串 + 设请求头 + send</span>
+    <span class="kw">if</span> (config.data) {
+      xhr.setRequestHeader(<span class="str">'Content-Type'</span>, <span class="str">'application/json'</span>)
+      xhr.send(JSON.stringify(config.data))
+    } <span class="kw">else</span> {
+      xhr.send()
+    }
+  })
+}</pre>
+    <div class="highlight">
+      <b>对照你用 axios 的写法：</b>你传 <code>params</code> → 它帮你拼 URL；传 <code>data</code> → 它帮你转 JSON 并设请求头；传 <code>method</code> → 它默认 GET。返回 Promise → 你就能 <code>.then()/.catch()</code>。
+    </div>
+  </div>
+
+  <!-- 6. 天气预报案例脉络 -->
+  <div class="card">
+    <h2>六、天气预报案例：myAxios 的实战</h2>
+    <table>
+      <tr><th>步骤</th><th>做什么</th><th>关键代码</th></tr>
+      <tr><td>默认天气</td><td>进页面先显示北京</td><td><code>getWeather('110100')</code></td></tr>
+      <tr><td>搜索城市</td><td>input 事件实时请求城市列表</td><td>监听 <code>input</code>，传关键字</td></tr>
+      <tr><td>点击切换</td><td>点城市名换天气</td><td>事件委托 + <code>dataset.code</code> 拿城市编码</td></tr>
+    </table>
+    <div class="note">注意：搜索城市传的是<b>城市名关键字</b>，展示天气传的是<b>城市编码 code</b>——传什么看接口文档要求。</div>
+  </div>
+
+  <!-- 7. 易错点 -->
+  <div class="card">
+    <h2>七、今天最容易踩的坑</h2>
+    <ul class="kv">
+      <li><b>忘了 JSON.parse</b>：XHR 的 <code>xhr.response</code> 是字符串，不 parse 直接用会报错</li>
+      <li><b>忘了 setRequestHeader</b>：POST 提交 JSON 时必须告诉服务器"我发的是 JSON"，否则后端收不到</li>
+      <li><b>send 里传什么</b>：GET 请求 send() 不传参；POST 提交数据 send(字符串)</li>
+      <li><b>Promise 状态不可逆</b>：resolve 之后再调 reject 没用，状态已经定了</li>
+      <li><b>loadend vs onload</b>：loadend 不管成功失败都会触发，所以要在里面判断 status；axios 内部也是这么干的</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/">https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="/img/cover2.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title=""><img class="cover" src="/img/cover3.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2"></div></div><div class="info-2"><div class="info-item-1">    Day04 AJAX进阶 复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;     background: #f5f7fa; color: #2c3e50...</div></div></div></a><a class="pagination-related" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title=""><img class="cover" src="/img/cover1.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2"></div></div><div class="info-2"><div class="info-item-1">    Day02 AJAX 综合案例复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body {     font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;     background: #f5f7fa;     colo...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">1.</span> <span class="toc-text">Day03 AJAX 原理 · 复习图谱</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.1.</span> <span class="toc-text">一、先搞懂：axios 和 XHR 是什么关系</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.2.</span> <span class="toc-text">二、原生 XHR 的四步固定流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.3.</span> <span class="toc-text">三、URLSearchParams：自动拼查询参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.4.</span> <span class="toc-text">四、Promise 的三种状态（必背）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.5.</span> <span class="toc-text">五、手写 myAxios：拆开看 axios 内部干了啥</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.6.</span> <span class="toc-text">六、天气预报案例：myAxios 的实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.7.</span> <span class="toc-text">七、今天最容易踩的坑</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:58.164Z" title="发表于 2026-09-24 20:16:58">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:55.625Z" title="发表于 2026-09-24 20:16:55">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:50.362Z" title="发表于 2026-09-24 20:16:50">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/" title="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理"/></a><div class="content"><a class="title" href="/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/" title="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理">深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理</a><time datetime="2026-09-24T10:00:00.000Z" title="发表于 2026-09-24 18:00:00">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="axios 实战：增删改查、图片上传与本地缓存"/></a><div class="content"><a class="title" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存">axios 实战：增删改查、图片上传与本地缓存</a><time datetime="2026-09-24T09:00:00.000Z" title="发表于 2026-09-24 17:00:00">2026-09-24</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

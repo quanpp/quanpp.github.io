@@ -1,0 +1,479 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理 | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="理解 Promise 为什么存在、三种状态、then&#x2F;catch 链式调用、async&#x2F;await 语法、事件循环与宏微任务、Promise.all，以及手写简易 axios。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入 Promise：从回调地狱到 async&#x2F;await，看懂 axios 内部原理">
+<meta property="og:url" content="https://quanpp.github.io/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="理解 Promise 为什么存在、三种状态、then&#x2F;catch 链式调用、async&#x2F;await 语法、事件循环与宏微任务、Promise.all，以及手写简易 axios。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover3.svg">
+<meta property="article:published_time" content="2026-09-24T10:00:00.000Z">
+<meta property="article:modified_time" content="2026-09-24T12:26:04.729Z">
+<meta property="article:author" content="PP">
+<meta property="article:tag" content="JavaScript">
+<meta property="article:tag" content="Promise">
+<meta property="article:tag" content="async-await">
+<meta property="article:tag" content="前端教程">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover3.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理",
+  "url": "https://quanpp.github.io/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/",
+  "image": "https://quanpp.github.io/img/cover3.svg",
+  "datePublished": "2026-09-24T10:00:00.000Z",
+  "dateModified": "2026-09-24T12:26:04.729Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/cover3.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-09-24T10:00:00.000Z" title="发表于 2026-09-24 18:00:00">2026-09-24</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-09-24T12:26:04.729Z" title="更新于 2026-09-24 20:26:04">2026-09-24</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="深入-Promise：从回调地狱到-async-await，看懂-axios-内部原理"><a href="#深入-Promise：从回调地狱到-async-await，看懂-axios-内部原理" class="headerlink" title="深入 Promise：从回调地狱到 async&#x2F;await，看懂 axios 内部原理"></a>深入 Promise：从回调地狱到 async&#x2F;await，看懂 axios 内部原理</h1><blockquote>
+<p>前端教程系列第三篇。你已经会用 axios 了，但你有没有想过：为什么 axios 能直接 <code>.then()</code>？为什么我们写的异步代码执行顺序是那样的？这篇文章带你彻底搞懂 Promise。</p>
+<p>📑<a href="/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/">打开知识图谱</a></p>
+</blockquote>
+<hr>
+<h2 id="一、为什么需要-Promise：回调地狱"><a href="#一、为什么需要-Promise：回调地狱" class="headerlink" title="一、为什么需要 Promise：回调地狱"></a>一、为什么需要 Promise：回调地狱</h2><p>假设你要做一个连续的请求：先拿用户 id，再用 id 拿用户名，再用用户名拿邮箱。传统回调写法长这样：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">$.<span class="title function_">ajax</span>(&#123;</span><br><span class="line">  <span class="attr">url</span>: <span class="string">&#x27;/user/id&#x27;</span>,</span><br><span class="line">  <span class="attr">success</span>: <span class="keyword">function</span> (<span class="params">res</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; id &#125; = res</span><br><span class="line">    $.<span class="title function_">ajax</span>(&#123;</span><br><span class="line">      <span class="attr">url</span>: <span class="string">&#x27;/user/name&#x27;</span>,</span><br><span class="line">      <span class="attr">data</span>: &#123; id &#125;,</span><br><span class="line">      <span class="attr">success</span>: <span class="keyword">function</span> (<span class="params">res</span>) &#123;</span><br><span class="line">        <span class="keyword">const</span> &#123; username &#125; = res</span><br><span class="line">        $.<span class="title function_">ajax</span>(&#123;</span><br><span class="line">          <span class="attr">url</span>: <span class="string">&#x27;/user/email&#x27;</span>,</span><br><span class="line">          <span class="attr">data</span>: &#123; username &#125;,</span><br><span class="line">          <span class="attr">success</span>: <span class="keyword">function</span> (<span class="params">res</span>) &#123;</span><br><span class="line">            <span class="variable language_">console</span>.<span class="title function_">log</span>(res.<span class="property">email</span>)</span><br><span class="line">          &#125;,</span><br><span class="line">          <span class="attr">error</span>: <span class="keyword">function</span> (<span class="params">err</span>) &#123; <span class="comment">/* 第三层错误 */</span> &#125;</span><br><span class="line">        &#125;)</span><br><span class="line">      &#125;,</span><br><span class="line">      <span class="attr">error</span>: <span class="keyword">function</span> (<span class="params">err</span>) &#123; <span class="comment">/* 第二层错误 */</span> &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">error</span>: <span class="keyword">function</span> (<span class="params">err</span>) &#123; <span class="comment">/* 第一层错误 */</span> &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>这就是<strong>回调地狱</strong>：代码一层层嵌套，缩进像个金字塔，可读性极差，每层还要单独写错误处理。</p>
+<p><strong>Promise 就是来解决这个问题的。</strong></p>
+<hr>
+<h2 id="二、Promise-是什么"><a href="#二、Promise-是什么" class="headerlink" title="二、Promise 是什么"></a>二、Promise 是什么</h2><p><strong>一句话：Promise 是一个管理异步操作的对象，它会告诉你这个异步操作成功了还是失败了。</strong></p>
+<h3 id="2-1-基本语法"><a href="#2-1-基本语法" class="headerlink" title="2.1 基本语法"></a>2.1 基本语法</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> p = <span class="keyword">new</span> <span class="title class_">Promise</span>(<span class="function">(<span class="params">resolve, reject</span>) =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// 这里写异步任务</span></span><br><span class="line">  <span class="comment">// 成功了调 resolve(结果)</span></span><br><span class="line">  <span class="comment">// 失败了调 reject(原因)</span></span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">p.<span class="title function_">then</span>(<span class="function"><span class="params">value</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// 成功，value 是 resolve 传过来的</span></span><br><span class="line">&#125;).<span class="title function_">catch</span>(<span class="function"><span class="params">reason</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// 失败，reason 是 reject 传过来的</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-三种状态"><a href="#2-2-三种状态" class="headerlink" title="2.2 三种状态"></a>2.2 三种状态</h3><p>每个 Promise 必然处于三种状态之一：</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>含义</th>
+<th>触发</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>pending（待定）</td>
+<td>初始状态，任务进行中</td>
+<td>new Promise 后默认</td>
+</tr>
+<tr>
+<td>fulfilled（已兑现）</td>
+<td>成功</td>
+<td>调 resolve()</td>
+</tr>
+<tr>
+<td>rejected（已拒绝）</td>
+<td>失败</td>
+<td>调 reject() 或代码报错</td>
+</tr>
+</tbody></table>
+<p><strong>两条死规则：</strong></p>
+<ol>
+<li>状态只能从 pending → fulfilled 或 pending → rejected，<strong>一旦改变就不可逆</strong></li>
+<li>resolve 和 reject 只生效一个（先调的那个）</li>
+</ol>
+<blockquote>
+<p>如果你 <code>new Promise(() =&gt; {})</code> 忘了调 resolve&#x2F;reject，状态永远是 pending，then 里的代码永远不会执行。</p>
+</blockquote>
+<hr>
+<h2 id="三、then-和-catch"><a href="#三、then-和-catch" class="headerlink" title="三、then 和 catch"></a>三、then 和 catch</h2><h3 id="3-1-then-接收成功结果"><a href="#3-1-then-接收成功结果" class="headerlink" title="3.1 then 接收成功结果"></a>3.1 then 接收成功结果</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> p = <span class="keyword">new</span> <span class="title class_">Promise</span>(<span class="function">(<span class="params">resolve</span>) =&gt;</span> &#123;</span><br><span class="line">  <span class="title function_">resolve</span>(<span class="string">&#x27;请求成功了&#x27;</span>)</span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">p.<span class="title function_">then</span>(<span class="function"><span class="params">value</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="variable language_">console</span>.<span class="title function_">log</span>(value) <span class="comment">// &#x27;请求成功了&#x27;</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-catch-捕获错误"><a href="#3-2-catch-捕获错误" class="headerlink" title="3.2 catch 捕获错误"></a>3.2 catch 捕获错误</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> p = <span class="keyword">new</span> <span class="title class_">Promise</span>(<span class="function">(<span class="params">resolve, reject</span>) =&gt;</span> &#123;</span><br><span class="line">  <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&#x27;出错了&#x27;</span>)  <span class="comment">// 抛错也会变成 rejected 状态</span></span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">p.<span class="title function_">catch</span>(<span class="function"><span class="params">reason</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="variable language_">console</span>.<span class="title function_">log</span>(reason) <span class="comment">// 捕获到错误</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>catch 什么时候触发？</strong></p>
+<ul>
+<li>Promise 状态变成 rejected</li>
+<li>前面 then 里的代码报错了</li>
+</ul>
+<blockquote>
+<p>调试技巧：打印 Promise 对象用 <code>console.dir(p)</code> 能看到内部的 state 和 result 属性，<code>console.log</code> 会自动简化。</p>
+</blockquote>
+<hr>
+<h2 id="四、链式调用：解决回调地狱的关键"><a href="#四、链式调用：解决回调地狱的关键" class="headerlink" title="四、链式调用：解决回调地狱的关键"></a>四、链式调用：解决回调地狱的关键</h2><h3 id="4-1-then-会返回新的-Promise"><a href="#4-1-then-会返回新的-Promise" class="headerlink" title="4.1 then 会返回新的 Promise"></a>4.1 then 会返回新的 Promise</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> p = <span class="keyword">new</span> <span class="title class_">Promise</span>(<span class="function"><span class="params">resolve</span> =&gt;</span> <span class="title function_">resolve</span>(<span class="number">1</span>))</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> p2 = p.<span class="title function_">then</span>(<span class="function"><span class="params">value</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="variable language_">console</span>.<span class="title function_">log</span>(value) <span class="comment">// 1</span></span><br><span class="line">  <span class="keyword">return</span> value + <span class="number">1</span>   <span class="comment">// return 的值传给下一个 then</span></span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line">p2.<span class="title function_">then</span>(<span class="function"><span class="params">value</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="variable language_">console</span>.<span class="title function_">log</span>(value) <span class="comment">// 2</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>关键点：<code>.then()</code> 返回一个新的 Promise</strong>，所以可以继续 <code>.then()</code>，形成链式调用。如果 then 里 return 另一个 Promise，链式调用会等那个 Promise 完成再继续。</p>
+<h3 id="4-2-改写回调地狱"><a href="#4-2-改写回调地狱" class="headerlink" title="4.2 改写回调地狱"></a>4.2 改写回调地狱</h3><p>先封装一个发请求的函数：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">getData</span>(<span class="params">url, data</span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">Promise</span>(<span class="function">(<span class="params">resolve, reject</span>) =&gt;</span> &#123;</span><br><span class="line">    $.<span class="title function_">ajax</span>(&#123;</span><br><span class="line">      <span class="attr">url</span>: url,</span><br><span class="line">      <span class="attr">data</span>: data,</span><br><span class="line">      <span class="attr">success</span>: <span class="function"><span class="params">res</span> =&gt;</span> <span class="title function_">resolve</span>(res),</span><br><span class="line">      <span class="attr">error</span>: <span class="function"><span class="params">res</span> =&gt;</span> <span class="title function_">reject</span>(res)</span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>然后链式调用，代码从”金字塔”变成”流水线”：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_">getData</span>(<span class="string">&#x27;/user/id&#x27;</span>, &#123;&#125;)</span><br><span class="line">  .<span class="title function_">then</span>(<span class="function"><span class="params">data</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; id &#125; = data</span><br><span class="line">    <span class="keyword">return</span> <span class="title function_">getData</span>(<span class="string">&#x27;/user/name&#x27;</span>, &#123; id &#125;)  <span class="comment">// return 下一个请求</span></span><br><span class="line">  &#125;)</span><br><span class="line">  .<span class="title function_">then</span>(<span class="function"><span class="params">data</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; username &#125; = data</span><br><span class="line">    <span class="keyword">return</span> <span class="title function_">getData</span>(<span class="string">&#x27;/user/email&#x27;</span>, &#123; username &#125;)</span><br><span class="line">  &#125;)</span><br><span class="line">  .<span class="title function_">then</span>(<span class="function"><span class="params">data</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&#x27;邮箱：&#x27;</span>, data.<span class="property">email</span>)</span><br><span class="line">  &#125;)</span><br><span class="line">  .<span class="title function_">catch</span>(<span class="function"><span class="params">err</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="comment">// 整个链条任何一步出错都来这里</span></span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&#x27;出错了&#x27;</span>, err)</span><br><span class="line">  &#125;)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、async-await：最优雅的写法"><a href="#五、async-await：最优雅的写法" class="headerlink" title="五、async &#x2F; await：最优雅的写法"></a>五、async &#x2F; await：最优雅的写法</h2><p>链式调用已经很好了，但 <code>async/await</code> 让异步代码写起来像同步代码一样直观。</p>
+<h3 id="5-1-基本用法"><a href="#5-1-基本用法" class="headerlink" title="5.1 基本用法"></a>5.1 基本用法</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">getUserInfo</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> idRes = <span class="keyword">await</span> <span class="title function_">getData</span>(<span class="string">&#x27;/user/id&#x27;</span>, &#123;&#125;)</span><br><span class="line">  <span class="keyword">const</span> &#123; id &#125; = idRes</span><br><span class="line"></span><br><span class="line">  <span class="keyword">const</span> nameRes = <span class="keyword">await</span> <span class="title function_">getData</span>(<span class="string">&#x27;/user/name&#x27;</span>, &#123; id &#125;)</span><br><span class="line">  <span class="keyword">const</span> &#123; username &#125; = nameRes</span><br><span class="line"></span><br><span class="line">  <span class="keyword">const</span> emailRes = <span class="keyword">await</span> <span class="title function_">getData</span>(<span class="string">&#x27;/user/email&#x27;</span>, &#123; username &#125;)</span><br><span class="line">  <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&#x27;邮箱：&#x27;</span>, emailRes.<span class="property">email</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="title function_">getUserInfo</span>()</span><br></pre></td></tr></table></figure>
+
+<p><strong>对比一下：</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>链式调用</th>
+<th>async&#x2F;await</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>取值</td>
+<td><code>.then(data =&gt; ...)</code></td>
+<td><code>const data = await ...</code></td>
+</tr>
+<tr>
+<td>错误处理</td>
+<td><code>.catch()</code></td>
+<td><code>try/catch</code></td>
+</tr>
+<tr>
+<td>可读性</td>
+<td>平铺但还是嵌套</td>
+<td>从上到下，像同步代码</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-两条铁律"><a href="#5-2-两条铁律" class="headerlink" title="5.2 两条铁律"></a>5.2 两条铁律</h3><ol>
+<li><strong>await 必须写在 async 函数里面</strong></li>
+<li><strong>await 会原地等待 Promise 成功</strong>，拿到结果才往下走</li>
+</ol>
+<h3 id="5-3-用-try-catch-捕获错误"><a href="#5-3-用-try-catch-捕获错误" class="headerlink" title="5.3 用 try&#x2F;catch 捕获错误"></a>5.3 用 try&#x2F;catch 捕获错误</h3><p>await 只能拿到成功结果，失败了要用 try&#x2F;catch：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">getUserInfo</span>(<span class="params"></span>) &#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="title function_">axios</span>(&#123; <span class="attr">url</span>: <span class="string">&#x27;/api/xxx&#x27;</span> &#125;)</span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">log</span>(res)</span><br><span class="line">  &#125; <span class="keyword">catch</span> (error) &#123;</span><br><span class="line">    <span class="comment">// 任何一步报错，try 里剩余代码不执行，直接进 catch</span></span><br><span class="line">    <span class="variable language_">console</span>.<span class="title function_">dir</span>(error)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-async-函数的返回值"><a href="#5-4-async-函数的返回值" class="headerlink" title="5.4 async 函数的返回值"></a>5.4 async 函数的返回值</h3><p>async 函数永远返回 Promise：</p>
+<ul>
+<li><code>return 123</code> → 返回成功状态的 Promise，值为 123</li>
+<li><code>return new Promise(...)</code> → 由那个 Promise 的结果决定</li>
+<li><code>throw new Error(...)</code> → 返回失败状态的 Promise</li>
+</ul>
+<hr>
+<h2 id="六、事件循环：JS-怎么安排代码执行顺序"><a href="#六、事件循环：JS-怎么安排代码执行顺序" class="headerlink" title="六、事件循环：JS 怎么安排代码执行顺序"></a>六、事件循环：JS 怎么安排代码执行顺序</h2><h3 id="6-1-同步-vs-异步"><a href="#6-1-同步-vs-异步" class="headerlink" title="6.1 同步 vs 异步"></a>6.1 同步 vs 异步</h3><ul>
+<li><strong>同步代码</strong>：逐行执行，原地等结果再往下走</li>
+<li><strong>异步代码</strong>：调用后不等，继续往下跑，完成后用回调通知你</li>
+</ul>
+<p>JS 中常见的异步代码：<code>setTimeout</code>、事件绑定、AJAX 请求。</p>
+<h3 id="6-2-为什么需要事件循环"><a href="#6-2-为什么需要事件循环" class="headerlink" title="6.2 为什么需要事件循环"></a>6.2 为什么需要事件循环</h3><p>JS 是<strong>单线程</strong>的，同一时刻只能执行一行代码。如果一行代码卡住了（比如网络请求），后面的代码就全等着。所以 JS 设计了事件循环机制：</p>
+<ol>
+<li>同步代码放入调用栈，从上到下执行</li>
+<li>遇到异步代码，交给浏览器&#x2F;API 去处理，不阻塞主线程</li>
+<li>异步任务完成后，回调函数放入任务队列排队</li>
+<li>调用栈空了，EventLoop 去队列取回调执行</li>
+</ol>
+<h3 id="6-3-宏任务与微任务"><a href="#6-3-宏任务与微任务" class="headerlink" title="6.3 宏任务与微任务"></a>6.3 宏任务与微任务</h3><p>ES6 引入 Promise 后，异步任务分了两类：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>宏任务</th>
+<th>微任务</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>谁执行</strong></td>
+<td>浏览器环境</td>
+<td>JS 引擎</td>
+</tr>
+<tr>
+<td><strong>包含</strong></td>
+<td>setTimeout、setInterval、AJAX完成、DOM事件</td>
+<td>Promise.then() 的回调</td>
+</tr>
+<tr>
+<td><strong>优先级</strong></td>
+<td>每轮只取一个</td>
+<td>每轮全部清空</td>
+</tr>
+</tbody></table>
+<p><strong>执行规则（必背）：</strong></p>
+<ol>
+<li>先把所有同步代码跑完</li>
+<li>清空所有微任务队列</li>
+<li>从宏任务队列取<strong>一个</strong>执行</li>
+<li>执行完再清空所有微任务</li>
+<li>再取下一个宏任务……循环</li>
+</ol>
+<p><strong>一句话：微任务永远比下一个宏任务先执行。</strong></p>
+<h3 id="6-4-经典面试题"><a href="#6-4-经典面试题" class="headerlink" title="6.4 经典面试题"></a>6.4 经典面试题</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="number">1</span>)</span><br><span class="line"><span class="built_in">setTimeout</span>(<span class="function">() =&gt;</span> <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="number">2</span>), <span class="number">0</span>)</span><br><span class="line"><span class="keyword">const</span> p = <span class="keyword">new</span> <span class="title class_">Promise</span>(<span class="function"><span class="params">resolve</span> =&gt;</span> <span class="title function_">resolve</span>(<span class="number">3</span>))</span><br><span class="line">p.<span class="title function_">then</span>(<span class="function"><span class="params">res</span> =&gt;</span> <span class="variable language_">console</span>.<span class="title function_">log</span>(res))</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="number">4</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>答案：1 → 4 → 3 → 2</strong></p>
+<p>推理：</p>
+<ol>
+<li>同步代码先跑：打印 1、4</li>
+<li>同步跑完，清空微任务：Promise.then 打印 3</li>
+<li>取一个宏任务：setTimeout 打印 2</li>
+</ol>
+<hr>
+<h2 id="七、Promise-all：同时发多个请求"><a href="#七、Promise-all：同时发多个请求" class="headerlink" title="七、Promise.all：同时发多个请求"></a>七、Promise.all：同时发多个请求</h2><p>需要同时加载多个接口时（比如首页同时显示多个城市天气），用 <code>Promise.all()</code> 合并：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> p = <span class="title class_">Promise</span>.<span class="title function_">all</span>([</span><br><span class="line">  <span class="title function_">axios</span>(&#123; <span class="attr">url</span>: <span class="string">&#x27;/weather?city=110100&#x27;</span> &#125;), <span class="comment">// 北京</span></span><br><span class="line">  <span class="title function_">axios</span>(&#123; <span class="attr">url</span>: <span class="string">&#x27;/weather?city=310100&#x27;</span> &#125;), <span class="comment">// 上海</span></span><br><span class="line">  <span class="title function_">axios</span>(&#123; <span class="attr">url</span>: <span class="string">&#x27;/weather?city=440100&#x27;</span> &#125;), <span class="comment">// 广州</span></span><br><span class="line">  <span class="title function_">axios</span>(&#123; <span class="attr">url</span>: <span class="string">&#x27;/weather?city=440300&#x27;</span> &#125;)  <span class="comment">// 深圳</span></span><br><span class="line">])</span><br><span class="line"></span><br><span class="line">p.<span class="title function_">then</span>(<span class="function"><span class="params">results</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// results 是数组，顺序和传入顺序一致</span></span><br><span class="line">  results.<span class="title function_">forEach</span>(<span class="function"><span class="params">item</span> =&gt;</span> <span class="variable language_">console</span>.<span class="title function_">log</span>(item.<span class="property">data</span>.<span class="property">area</span>))</span><br><span class="line">&#125;).<span class="title function_">catch</span>(<span class="function"><span class="params">err</span> =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// 任何一个失败，直接进 catch</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>两个要点：</strong></p>
+<ul>
+<li>所有 Promise 都成功才进 then，结果顺序和传入顺序一致</li>
+<li>任何一个失败就直接进 catch</li>
+</ul>
+<hr>
+<h2 id="八、拆开看：axios-内部到底怎么工作的"><a href="#八、拆开看：axios-内部到底怎么工作的" class="headerlink" title="八、拆开看：axios 内部到底怎么工作的"></a>八、拆开看：axios 内部到底怎么工作的</h2><p>现在你知道了 Promise，我们来揭开 axios 的面纱。axios 本质上就是 <strong>XMLHttpRequest + Promise</strong> 的封装。</p>
+<h3 id="8-1-XMLHttpRequest-四步"><a href="#8-1-XMLHttpRequest-四步" class="headerlink" title="8.1 XMLHttpRequest 四步"></a>8.1 XMLHttpRequest 四步</h3><p>浏览器原生发请求的方式：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> xhr = <span class="keyword">new</span> <span class="title class_">XMLHttpRequest</span>()       <span class="comment">// 1. 创建对象</span></span><br><span class="line">xhr.<span class="title function_">open</span>(<span class="string">&#x27;GET&#x27;</span>, <span class="string">&#x27;http://xxx/api/...&#x27;</span>)  <span class="comment">// 2. 配置方法和URL</span></span><br><span class="line">xhr.<span class="title function_">addEventListener</span>(<span class="string">&#x27;loadend&#x27;</span>, <span class="function">() =&gt;</span> &#123; <span class="comment">// 3. 监听完成</span></span><br><span class="line">  <span class="variable language_">console</span>.<span class="title function_">log</span>(xhr.<span class="property">response</span>)            <span class="comment">//    拿到的是字符串</span></span><br><span class="line">&#125;)</span><br><span class="line">xhr.<span class="title function_">send</span>()                              <span class="comment">// 4. 发起请求</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-和-axios-比，XHR-啥都得自己干"><a href="#8-2-和-axios-比，XHR-啥都得自己干" class="headerlink" title="8.2 和 axios 比，XHR 啥都得自己干"></a>8.2 和 axios 比，XHR 啥都得自己干</h3><table>
+<thead>
+<tr>
+<th>事情</th>
+<th>axios 帮你做了</th>
+<th>XHR 要自己做</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查询参数</td>
+<td><code>params</code> 自动拼 URL</td>
+<td>手动拼 <code>?pname=辽宁</code></td>
+</tr>
+<tr>
+<td>提交数据</td>
+<td><code>data</code> 自动转 JSON</td>
+<td><code>JSON.stringify()</code> + <code>setRequestHeader()</code> + <code>send(字符串)</code></td>
+</tr>
+<tr>
+<td>解析响应</td>
+<td>自动 JSON.parse</td>
+<td>手动 <code>JSON.parse(xhr.response)</code></td>
+</tr>
+<tr>
+<td>成功&#x2F;失败</td>
+<td>自动判断状态码</td>
+<td>手动判断 <code>xhr.status</code> 是否在 200~299</td>
+</tr>
+</tbody></table>
+<h3 id="8-3-手写一个简易-axios"><a href="#8-3-手写一个简易-axios" class="headerlink" title="8.3 手写一个简易 axios"></a>8.3 手写一个简易 axios</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">myAxios</span>(<span class="params">config</span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">Promise</span>(<span class="function">(<span class="params">resolve, reject</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> xhr = <span class="keyword">new</span> <span class="title class_">XMLHttpRequest</span>()</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ① params: 有查询参数就拼到 URL 后面</span></span><br><span class="line">    <span class="keyword">if</span> (config.<span class="property">params</span>) &#123;</span><br><span class="line">      <span class="keyword">const</span> qs = <span class="keyword">new</span> <span class="title class_">URLSearchParams</span>(config.<span class="property">params</span>).<span class="title function_">toString</span>()</span><br><span class="line">      config.<span class="property">url</span> += <span class="string">`?<span class="subst">$&#123;qs&#125;</span>`</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ② method: 默认 GET</span></span><br><span class="line">    xhr.<span class="title function_">open</span>(config.<span class="property">method</span> || <span class="string">&#x27;GET&#x27;</span>, config.<span class="property">url</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ③ 监听完成，判断成功还是失败</span></span><br><span class="line">    xhr.<span class="title function_">addEventListener</span>(<span class="string">&#x27;loadend&#x27;</span>, <span class="function">() =&gt;</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (xhr.<span class="property">status</span> &gt;= <span class="number">200</span> &amp;&amp; xhr.<span class="property">status</span> &lt; <span class="number">300</span>) &#123;</span><br><span class="line">        <span class="title function_">resolve</span>(<span class="title class_">JSON</span>.<span class="title function_">parse</span>(xhr.<span class="property">response</span>))</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="title function_">reject</span>(<span class="keyword">new</span> <span class="title class_">Error</span>(xhr.<span class="property">response</span>))</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ④ data: 有请求体就转 JSON 发出去</span></span><br><span class="line">    <span class="keyword">if</span> (config.<span class="property">data</span>) &#123;</span><br><span class="line">      xhr.<span class="title function_">setRequestHeader</span>(<span class="string">&#x27;Content-Type&#x27;</span>, <span class="string">&#x27;application/json&#x27;</span>)</span><br><span class="line">      xhr.<span class="title function_">send</span>(<span class="title class_">JSON</span>.<span class="title function_">stringify</span>(config.<span class="property">data</span>))</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      xhr.<span class="title function_">send</span>()</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>你用 axios 时传的 <code>url</code>、<code>method</code>、<code>params</code>、<code>data</code>，内部就是上面这些事。返回值是 Promise，所以你能 <code>.then()</code> 或 <code>await</code>。</p>
+<hr>
+<h2 id="九、常见易错点"><a href="#九、常见易错点" class="headerlink" title="九、常见易错点"></a>九、常见易错点</h2><ol>
+<li><strong>忘了 resolve&#x2F;reject</strong>：new Promise 里不调，then 永远不执行</li>
+<li><strong>await 不在 async 里</strong>：语法错误</li>
+<li><strong>async 函数忘了调用</strong>：定义了不执行，里面的代码不会跑</li>
+<li><strong>没加 try&#x2F;catch</strong>：await 的 Promise 失败了会变成未捕获异常</li>
+<li><strong>以为 setTimeout(0) 马上执行</strong>：它是宏任务，要等所有同步代码和微任务跑完</li>
+<li><strong>Promise.all 一个失败全挂</strong>：需要部分成功也显示的话用 <code>Promise.allSettled</code></li>
+</ol>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Promise</td>
+<td>管理异步操作状态的对象，解决回调地狱</td>
+</tr>
+<tr>
+<td>三种状态</td>
+<td>pending → fulfilled &#x2F; rejected，不可逆</td>
+</tr>
+<tr>
+<td>then</td>
+<td>接收成功结果，返回新 Promise 可链式调用</td>
+</tr>
+<tr>
+<td>catch</td>
+<td>统一捕获错误</td>
+</tr>
+<tr>
+<td>async&#x2F;await</td>
+<td>用同步写法写异步代码，await 必须在 async 里</td>
+</tr>
+<tr>
+<td>事件循环</td>
+<td>同步 → 清空微任务 → 取一个宏任务 → 循环</td>
+</tr>
+<tr>
+<td>宏任务 vs 微任务</td>
+<td>setTimeout 是宏，Promise.then 是微；微任务优先</td>
+</tr>
+<tr>
+<td>Promise.all</td>
+<td>合并多个 Promise，全成功才进 then</td>
+</tr>
+<tr>
+<td>axios</td>
+<td>XHR + Promise 的封装</td>
+</tr>
+</tbody></table>
+<hr>
+<blockquote>
+<p>前端教程系列完。从”会用 axios”到”理解 axios 内部”，这三篇串起来就是 AJAX 从入门到原理的完整路径。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/">https://quanpp.github.io/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B/">前端教程</a><a class="post-meta__tags" href="/tags/JavaScript/">JavaScript</a><a class="post-meta__tags" href="/tags/Promise/">Promise</a><a class="post-meta__tags" href="/tags/async-await/">async-await</a></div><div class="post-share"><div class="social-share" data-image="/img/cover3.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title=""><img class="cover" src="/img/cover1.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2"></div></div><div class="info-2"><div class="info-item-1">    Day02 AJAX 综合案例复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body {     font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;     background: #f5f7fa;     colo...</div></div></div></a><a class="pagination-related" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存"><img class="cover" src="/img/cover2.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">axios 实战：增删改查、图片上传与本地缓存</div></div><div class="info-2"><div class="info-item-1">用 axios 完成经典的图书管理 CRUD 业务、Bootstrap 弹框使用、图片上传 FormData、localStorage 本地缓存。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-24</div><div class="info-item-2">axios 实战：增删改查、图片上传与本地缓存</div></div><div class="info-2"><div class="info-item-1">用 axios 完成经典的图书管理 CRUD 业务、Bootstrap 弹框使用、图片上传 FormData、localStorage 本地缓存。</div></div></div></a><a class="pagination-related" href="/2026/09/24/AJAX%E5%85%A5%E9%97%A8%E2%80%94%E2%80%94axios%E5%9F%BA%E7%A1%80/" title="AJAX 入门：用 axios 从服务器拿数据"><img class="cover" src="/img/cover1.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-24</div><div class="info-item-2">AJAX 入门：用 axios 从服务器拿数据</div></div><div class="info-2"><div class="info-item-1">从零开始学习 AJAX：什么是 AJAX、axios 基本用法、URL 与查询参数、GET/POST 请求方法、错误处理、HTTP 报文、接口文档阅读、form-serialize 表单收集。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%B7%B1%E5%85%A5-Promise%EF%BC%9A%E4%BB%8E%E5%9B%9E%E8%B0%83%E5%9C%B0%E7%8B%B1%E5%88%B0-async-await%EF%BC%8C%E7%9C%8B%E6%87%82-axios-%E5%86%85%E9%83%A8%E5%8E%9F%E7%90%86"><span class="toc-number">1.</span> <span class="toc-text">深入 Promise：从回调地狱到 async&#x2F;await，看懂 axios 内部原理</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81-Promise%EF%BC%9A%E5%9B%9E%E8%B0%83%E5%9C%B0%E7%8B%B1"><span class="toc-number">1.1.</span> <span class="toc-text">一、为什么需要 Promise：回调地狱</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81Promise-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">1.2.</span> <span class="toc-text">二、Promise 是什么</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E5%9F%BA%E6%9C%AC%E8%AF%AD%E6%B3%95"><span class="toc-number">1.2.1.</span> <span class="toc-text">2.1 基本语法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E4%B8%89%E7%A7%8D%E7%8A%B6%E6%80%81"><span class="toc-number">1.2.2.</span> <span class="toc-text">2.2 三种状态</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81then-%E5%92%8C-catch"><span class="toc-number">1.3.</span> <span class="toc-text">三、then 和 catch</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-then-%E6%8E%A5%E6%94%B6%E6%88%90%E5%8A%9F%E7%BB%93%E6%9E%9C"><span class="toc-number">1.3.1.</span> <span class="toc-text">3.1 then 接收成功结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-catch-%E6%8D%95%E8%8E%B7%E9%94%99%E8%AF%AF"><span class="toc-number">1.3.2.</span> <span class="toc-text">3.2 catch 捕获错误</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E9%93%BE%E5%BC%8F%E8%B0%83%E7%94%A8%EF%BC%9A%E8%A7%A3%E5%86%B3%E5%9B%9E%E8%B0%83%E5%9C%B0%E7%8B%B1%E7%9A%84%E5%85%B3%E9%94%AE"><span class="toc-number">1.4.</span> <span class="toc-text">四、链式调用：解决回调地狱的关键</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-then-%E4%BC%9A%E8%BF%94%E5%9B%9E%E6%96%B0%E7%9A%84-Promise"><span class="toc-number">1.4.1.</span> <span class="toc-text">4.1 then 会返回新的 Promise</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E6%94%B9%E5%86%99%E5%9B%9E%E8%B0%83%E5%9C%B0%E7%8B%B1"><span class="toc-number">1.4.2.</span> <span class="toc-text">4.2 改写回调地狱</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81async-await%EF%BC%9A%E6%9C%80%E4%BC%98%E9%9B%85%E7%9A%84%E5%86%99%E6%B3%95"><span class="toc-number">1.5.</span> <span class="toc-text">五、async &#x2F; await：最优雅的写法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95"><span class="toc-number">1.5.1.</span> <span class="toc-text">5.1 基本用法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E4%B8%A4%E6%9D%A1%E9%93%81%E5%BE%8B"><span class="toc-number">1.5.2.</span> <span class="toc-text">5.2 两条铁律</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E7%94%A8-try-catch-%E6%8D%95%E8%8E%B7%E9%94%99%E8%AF%AF"><span class="toc-number">1.5.3.</span> <span class="toc-text">5.3 用 try&#x2F;catch 捕获错误</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-async-%E5%87%BD%E6%95%B0%E7%9A%84%E8%BF%94%E5%9B%9E%E5%80%BC"><span class="toc-number">1.5.4.</span> <span class="toc-text">5.4 async 函数的返回值</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%EF%BC%9AJS-%E6%80%8E%E4%B9%88%E5%AE%89%E6%8E%92%E4%BB%A3%E7%A0%81%E6%89%A7%E8%A1%8C%E9%A1%BA%E5%BA%8F"><span class="toc-number">1.6.</span> <span class="toc-text">六、事件循环：JS 怎么安排代码执行顺序</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E5%90%8C%E6%AD%A5-vs-%E5%BC%82%E6%AD%A5"><span class="toc-number">1.6.1.</span> <span class="toc-text">6.1 同步 vs 异步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF"><span class="toc-number">1.6.2.</span> <span class="toc-text">6.2 为什么需要事件循环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E5%AE%8F%E4%BB%BB%E5%8A%A1%E4%B8%8E%E5%BE%AE%E4%BB%BB%E5%8A%A1"><span class="toc-number">1.6.3.</span> <span class="toc-text">6.3 宏任务与微任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-%E7%BB%8F%E5%85%B8%E9%9D%A2%E8%AF%95%E9%A2%98"><span class="toc-number">1.6.4.</span> <span class="toc-text">6.4 经典面试题</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81Promise-all%EF%BC%9A%E5%90%8C%E6%97%B6%E5%8F%91%E5%A4%9A%E4%B8%AA%E8%AF%B7%E6%B1%82"><span class="toc-number">1.7.</span> <span class="toc-text">七、Promise.all：同时发多个请求</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E6%8B%86%E5%BC%80%E7%9C%8B%EF%BC%9Aaxios-%E5%86%85%E9%83%A8%E5%88%B0%E5%BA%95%E6%80%8E%E4%B9%88%E5%B7%A5%E4%BD%9C%E7%9A%84"><span class="toc-number">1.8.</span> <span class="toc-text">八、拆开看：axios 内部到底怎么工作的</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-XMLHttpRequest-%E5%9B%9B%E6%AD%A5"><span class="toc-number">1.8.1.</span> <span class="toc-text">8.1 XMLHttpRequest 四步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E5%92%8C-axios-%E6%AF%94%EF%BC%8CXHR-%E5%95%A5%E9%83%BD%E5%BE%97%E8%87%AA%E5%B7%B1%E5%B9%B2"><span class="toc-number">1.8.2.</span> <span class="toc-text">8.2 和 axios 比，XHR 啥都得自己干</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E6%89%8B%E5%86%99%E4%B8%80%E4%B8%AA%E7%AE%80%E6%98%93-axios"><span class="toc-number">1.8.3.</span> <span class="toc-text">8.3 手写一个简易 axios</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E5%B8%B8%E8%A7%81%E6%98%93%E9%94%99%E7%82%B9"><span class="toc-number">1.9.</span> <span class="toc-text">九、常见易错点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">1.10.</span> <span class="toc-text">总结</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:58.164Z" title="发表于 2026-09-24 20:16:58">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:55.625Z" title="发表于 2026-09-24 20:16:55">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:50.362Z" title="发表于 2026-09-24 20:16:50">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/" title="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理"/></a><div class="content"><a class="title" href="/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/" title="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理">深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理</a><time datetime="2026-09-24T10:00:00.000Z" title="发表于 2026-09-24 18:00:00">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="axios 实战：增删改查、图片上传与本地缓存"/></a><div class="content"><a class="title" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存">axios 实战：增删改查、图片上传与本地缓存</a><time datetime="2026-09-24T09:00:00.000Z" title="发表于 2026-09-24 17:00:00">2026-09-24</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

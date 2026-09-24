@@ -1,0 +1,442 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Welcome to PP' blog | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Day04 AJAX进阶 复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body { font-family: -apple-system, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif;     background: #f5f7fa; color: #2c3e50; p">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Welcome to PP&#39; blog">
+<meta property="og:url" content="https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="Day04 AJAX进阶 复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body { font-family: -apple-system, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif;     background: #f5f7fa; color: #2c3e50; p">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover3.svg">
+<meta property="article:published_time" content="2026-09-24T12:16:58.164Z">
+<meta property="article:modified_time" content="2026-09-24T12:16:58.165Z">
+<meta property="article:author" content="PP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover3.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "",
+  "url": "https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/",
+  "image": "https://quanpp.github.io/img/cover3.svg",
+  "datePublished": "2026-09-24T12:16:58.164Z",
+  "dateModified": "2026-09-24T12:16:58.165Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Welcome to PP\' blog',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/cover3.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Welcome to PP' blog</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">无标题</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-09-24T12:16:58.164Z" title="发表于 2026-09-24 20:16:58">2026-09-24</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-09-24T12:16:58.165Z" title="更新于 2026-09-24 20:16:58">2026-09-24</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Day04 AJAX进阶 复习图谱</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f5f7fa; color: #2c3e50; padding: 24px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; text-align: center; margin-bottom: 6px; }
+  .sub { text-align:center; color:#7f8c8d; font-size:14px; margin-bottom:28px; }
+  .card { background:#fff; border-radius:12px; padding:22px 26px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:22px; }
+  .card h2 { font-size:18px; margin-bottom:14px; padding-left:10px; border-left:4px solid #8e44ad; }
+  .card h2 .tag { font-size:12px; color:#fff; background:#8e44ad; border-radius:4px; padding:2px 8px; margin-left:8px; vertical-align:middle; font-weight:normal;}
+  code { background:#f4f6f8; padding:1px 5px; border-radius:3px; font-size:12.5px; color:#c0392b; }
+  pre { background:#2c3e50; color:#ecf0f1; padding:14px 16px; border-radius:8px;
+    font-size:12.5px; line-height:1.7; overflow-x:auto; margin:10px 0; }
+  pre .cm { color:#95a5a6; }
+  pre .kw { color:#f39c12; }
+  pre .str { color:#2ecc71; }
+  pre .num { color:#e74c3c; }
+
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+  .box { border-radius:10px; padding:14px; font-size:13px; }
+  .box.sync { background:#eaf2f8; border-left:4px solid #2980b9; }
+  .box.async { background:#fef9e7; border-left:4px solid #f39c12; }
+  .box h3 { font-size:14px; margin-bottom:6px; }
+
+  .evolution { display:flex; flex-direction:column; gap:10px; margin:12px 0; }
+  .evo-step { display:flex; align-items:flex-start; gap:12px; }
+  .evo-n { flex-shrink:0; width:28px; height:28px; line-height:28px; border-radius:50%;
+    background:#8e44ad; color:#fff; text-align:center; font-size:13px; font-weight:bold;}
+  .evo-body { flex:1; background:#f8f4fc; border-radius:8px; padding:10px 14px; font-size:13px;}
+  .evo-body b { color:#8e44ad; }
+
+  .loop-diagram { background:#f8f4fc; border-radius:10px; padding:18px; margin:12px 0; font-size:13px;}
+  .loop-row { display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap;}
+  .loop-box { padding:8px 14px; border-radius:6px; font-weight:bold; font-size:13px;}
+  .callstack { background:#d5f5e3; }
+  .micro { background:#fadbd8; }
+  .macro { background:#d6eaf8; }
+  .loop-arrow { color:#8e44ad; font-weight:bold; font-size:16px;}
+
+  table { width:100%; border-collapse:collapse; font-size:13.5px; margin-top:6px;}
+  th,td { border:1px solid #e1e8ed; padding:8px 10px; text-align:left;}
+  th { background:#f0f4f8; }
+
+  .highlight { background:#fff8e1; border-left:4px solid #f39c12; padding:10px 14px; border-radius:0 8px 8px 0; font-size:13.5px; margin-top:10px;}
+  .danger { background:#fdedec; border-left:4px solid #e74c3c; padding:10px 14px; border-radius:0 8px 8px 0; font-size:13.5px; margin-top:10px;}
+  .note { font-size:12.5px; color:#7f8c8d; margin-top:8px; }
+  .kv { font-size:13.5px; }
+  .kv li { margin-bottom:8px; list-style:none; padding-left:18px; position:relative;}
+  .kv li::before { content:"▸"; position:absolute; left:0; color:#8e44ad; }
+  @media(max-width:760px){ .compare{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Day04 AJAX 进阶 · 复习图谱</h1>
+  <div class="sub">主线：回调地狱怎么来的 → Promise 链式调用 → async/await 终极解法 → 事件循环原理</div>
+
+  <!-- 1. 同步 vs 异步 -->
+  <div class="card">
+    <h2>一、同步 vs 异步：先分清谁是谁</h2>
+    <div class="compare">
+      <div class="box sync">
+        <h3>同步代码</h3>
+        逐行执行，<b>原地等结果</b>再往下走。<br>
+        例：<code>const a = 1+1</code>、<code>console.log()</code>、变量赋值。
+      </div>
+      <div class="box async">
+        <h3>异步代码</h3>
+        调用后<b>不等</b>，继续往下跑，将来完成了再用<b>回调函数</b>通知你。<br>
+        三大件：<code>setTimeout/setInterval</code>、<b>事件绑定</b>、<b>AJAX请求</b>。
+      </div>
+    </div>
+    <div class="highlight">
+      <b>记住这个打印顺序题：</b><br>
+      <code>console.log(1)</code> → 同步，先打<br>
+      <code>setTimeout(...2)</code> → 异步，丢给浏览器计时<br>
+      <code>document.body.style.background='pink'</code> → 同步<br>
+      <code>console.log(4)</code> → 同步<br>
+      <b>结果：1 → 4 → 2（setTimeout 到点后才打）</b>。事件回调更晚——点击一次才打一次 3。
+    </div>
+  </div>
+
+  <!-- 2. 回调地狱到 async/await 演进 -->
+  <div class="card">
+    <h2>二、解决回调地狱的三代演进（今天的核心主线）<span class="tag">面试高频</span></h2>
+    <div class="evolution">
+      <div class="evo-step">
+        <div class="evo-n">1</div>
+        <div class="evo-body">
+          <b>回调地狱（嵌套）</b>：请求省 → 回调里请求市 → 回调里请求区，层层嵌套，缩进像金字塔，改一处牵一发动全身。
+        </div>
+      </div>
+      <div class="evo-step">
+        <div class="evo-n">2</div>
+        <div class="evo-body">
+          <b>Promise 链式调用</b>：<code>then()</code> 会返回一个<b>新的 Promise</b>，在 then 里 return 下一个请求，就可以用 <code>.then().then()</code> 平铺展开，不再嵌套。
+        </div>
+      </div>
+      <div class="evo-step">
+        <div class="evo-n">3</div>
+        <div class="evo-body">
+          <b>async/await（终极写法）</b>：在 async 函数里用 <code>await</code> 代替 <code>.then()</code>，代码看起来像同步一样从上到下写，实际上还是异步等待。
+        </div>
+      </div>
+    </div>
+<pre><span class="cm">// 回调地狱（丑）</span>
+axios({url:<span class="str">'/province'</span>}).then(p => {
+  axios({url:<span class="str">'/city'</span>, params:{pname:p.data.list[0]}}).then(c => {
+    axios({url:<span class="str">'/area'</span>, params:{...}}).then(a => { ... })
+  })
+})
+
+<span class="cm">// async/await（优雅）——推荐写法</span>
+<span class="kw">async function</span> getData() {
+  <span class="kw">const</span> pObj = <span class="kw">await</span> axios({url:<span class="str">'/province'</span>})
+  <span class="kw">const</span> pname = pObj.data.list[0]
+  <span class="kw">const</span> cObj = <span class="kw">await</span> axios({url:<span class="str">'/city'</span>, params:{pname}})
+  <span class="kw">const</span> cname = cObj.data.list[0]
+  <span class="kw">const</span> aObj = <span class="kw">await</span> axios({url:<span class="str">'/area'</span>, params:{pname, cname}})
+  <span class="cm">// 直接用结果，不用 .then</span>
+}</pre>
+    <div class="danger">
+      <b>await 死规则：</b>① await 必须写在 <code>async</code> 函数里面；② await 后面跟的是 Promise 对象，它会<b>原地等待</b> Promise 成功才往下走；③ await 只能拿到成功结果，失败要用 <code>try/catch</code> 捕获。
+    </div>
+  </div>
+
+  <!-- 3. try/catch -->
+  <div class="card">
+    <h2>三、try/catch：替代 .catch() 的错误捕获</h2>
+<pre><span class="kw">async function</span> getData() {
+  <span class="kw">try</span> {
+    <span class="kw">const</span> pObj = <span class="kw">await</span> axios({url:<span class="str">'/province'</span>})  <span class="cm">// 报错就跳到 catch</span>
+    <span class="kw">const</span> cObj = <span class="kw">await</span> axios({url:<span class="str">'/city'</span>})
+    <span class="cm">// try 里某行报错后，后面的代码都不执行</span>
+  } <span class="kw">catch</span> (error) {
+    console.dir(error)  <span class="cm">// 错误对象用 console.dir 看详细</span>
+  }
+}</pre>
+    <div class="note">对比：Promise 写法用 <code>.catch()</code>；async/await 写法用 <code>try/catch</code>。效果一样，都是捕获失败。</div>
+  </div>
+
+  <!-- 4. 事件循环 -->
+  <div class="card">
+    <h2>四、事件循环 EventLoop：JS 怎么安排代码执行顺序<span class="tag">必会</span></h2>
+    <p style="font-size:13.5px; margin-bottom:8px">JS 是<b>单线程</b>的，同一时刻只能跑一行代码。那异步代码怎么不卡住？靠事件循环：</p>
+    <div class="loop-diagram">
+      <div class="loop-row">
+        <div class="loop-box callstack">① 调用栈（同步代码）</div>
+        <span class="loop-arrow">→ 遇到 setTimeout / AJAX / 事件</span>
+      </div>
+      <div class="loop-row">
+        <div class="loop-box macro">② 宏任务队列（浏览器管）</div>
+        <span style="font-size:12px;color:#7f8c8d">setTimeout / setInterval / AJAX完成 / 点击事件</span>
+      </div>
+      <div class="loop-row">
+        <div class="loop-box micro">③ 微任务队列（JS引擎管）</div>
+        <span style="font-size:12px;color:#7f8c8d">Promise.then() 回调</span>
+      </div>
+    </div>
+    <div class="highlight">
+      <b>执行规则（背下来）：</b><br>
+      1. 先把<b>所有同步代码</b>跑完（调用栈清空）<br>
+      2. 检查<b>微任务队列</b>，<b>全部清空</b>（一个不留）<br>
+      3. 取<b>一个</b>宏任务执行<br>
+      4. 执行完再清空所有微任务<br>
+      5. 再取下一个宏任务……循环往复<br>
+      <b>关键：微任务永远比下一个宏任务先执行。</b>
+    </div>
+  </div>
+
+  <!-- 5. 经典面试题 -->
+  <div class="card">
+    <h2>五、经典执行顺序题（自己先做一遍）</h2>
+<pre>console.log(<span class="num">1</span>)
+setTimeout(() => console.log(<span class="num">2</span>), <span class="num">0</span>)
+<span class="kw">const</span> p = <span class="kw">new</span> Promise(resolve => {
+  resolve(<span class="num">3</span>)
+})
+p.then(res => console.log(res))
+console.log(<span class="num">4</span>)</pre>
+    <div class="highlight" style="background:#eafaf1; border-left-color:#27ae60;">
+      <b>答案：1 → 4 → 3 → 2</b><br>
+      同步先跑：1、4 打出来。Promise 是微任务，setTimeout 是宏任务。同步跑完后清空微任务队列打 3，然后才取宏任务打 2。
+    </div>
+    <div class="danger">
+      <b>再想一道难的：</b>如果 setTimeout 里面又 new 了一个 Promise 并 .then()，那这个 .then 属于<b>新的一轮宏任务里产生的微任务</b>——等这个 setTimeout 宏任务跑完后，再清空这轮新产生的微任务。
+    </div>
+  </div>
+
+  <!-- 6. 宏任务 vs 微任务速查 -->
+  <div class="card">
+    <h2>六、宏任务 vs 微任务 对照表</h2>
+    <table>
+      <tr><th></th><th>宏任务（浏览器环境）</th><th>微任务（JS 引擎）</th></tr>
+      <tr><td><b>包含</b></td><td>setTimeout / setInterval<br>AJAX 请求完成<br>DOM 事件绑定<br>script 整体执行</td><td>Promise.then() / .catch() 回调</td></tr>
+      <tr><td><b>优先级</b></td><td>每轮取<b>一个</b>执行</td><td>每轮<b>全部清空</b>才走宏任务</td></tr>
+    </table>
+  </div>
+
+  <!-- 7. Promise.all -->
+  <div class="card">
+    <h2>七、Promise.all：同时发多个请求</h2>
+    <p style="font-size:13.5px; margin-bottom:8px">需要<b>同时</b>加载多个接口（比如首页同时显示北上广深天气），用 <code>Promise.all([...])</code> 合并：</p>
+<pre><span class="cm">// 同时发 4 个请求，谁先到谁后到无所谓</span>
+<span class="kw">const</span> p = Promise.all([
+  axios({url:<span class="str">'/weather?city=110100'</span>}),  <span class="cm">// 北京</span>
+  axios({url:<span class="str">'/weather?city=310100'</span>}),  <span class="cm">// 上海</span>
+  axios({url:<span class="str">'/weather?city=440100'</span>}),  <span class="cm">// 广州</span>
+  axios({url:<span class="str">'/weather?city=440300'</span>})   <span class="cm">// 深圳</span>
+])
+p.then(results => {
+  <span class="cm">// results 是数组，顺序和你传入的顺序一致</span>
+  console.log(results[<span class="num">0</span>].data.data.area)  <span class="cm">// 北京</span>
+})</pre>
+    <div class="highlight">
+      <b>两个要点：</b>① 所有请求<b>都成功</b>才进 then，结果按传入顺序排列；② <b>任何一个失败</b>就直接进 catch。
+    </div>
+  </div>
+
+  <!-- 8. 实战案例 -->
+  <div class="card">
+    <h2>八、两个实战案例用了什么</h2>
+    <table>
+      <tr><th>案例</th><th>核心技术</th></tr>
+      <tr><td>商品分类</td><td>先请求一级分类 → 遍历每个 id 发二级分类请求 → 用 <code>Promise.all</code> 合并所有二级请求 → 一起渲染</td></tr>
+      <tr><td>省市区联动</td><td>select 的 <code>change</code> 事件；切换省时清空市和区；用 <code>async/await</code> 写请求；submit 时 serialize 收表单 + try/catch 提交反馈</td></tr>
+    </table>
+    <div class="note">select 下拉框小知识点：<code>select.value</code> 拿到的是选中 option 的 <code>value</code> 属性，不是页面上看到的文字。</div>
+  </div>
+
+</div>
+</body>
+</html>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/">https://quanpp.github.io/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="/img/cover3.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title=""><img class="cover" src="/img/cover2.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2"></div></div><div class="info-2"><div class="info-item-1">    Day03 AJAX原理 复习图谱    * { margin:0; padding:0; box-sizing:border-box; }   body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;     background: #f5f7fa; color: #2c3e50...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link"><span class="toc-number">1.</span> <span class="toc-text">Day04 AJAX 进阶 · 复习图谱</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.1.</span> <span class="toc-text">一、同步 vs 异步：先分清谁是谁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link"><span class="toc-number">1.1.1.</span> <span class="toc-text">同步代码</span></a></li><li class="toc-item toc-level-3"><a class="toc-link"><span class="toc-number">1.1.2.</span> <span class="toc-text">异步代码</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.2.</span> <span class="toc-text">二、解决回调地狱的三代演进（今天的核心主线）面试高频</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.3.</span> <span class="toc-text">三、try&#x2F;catch：替代 .catch() 的错误捕获</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.4.</span> <span class="toc-text">四、事件循环 EventLoop：JS 怎么安排代码执行顺序必会</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.5.</span> <span class="toc-text">五、经典执行顺序题（自己先做一遍）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.6.</span> <span class="toc-text">六、宏任务 vs 微任务 对照表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.7.</span> <span class="toc-text">七、Promise.all：同时发多个请求</span></a></li><li class="toc-item toc-level-2"><a class="toc-link"><span class="toc-number">1.8.</span> <span class="toc-text">八、两个实战案例用了什么</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day04_AJAX%E8%BF%9B%E9%98%B6%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:58.164Z" title="发表于 2026-09-24 20:16:58">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day03_AJAX%E5%8E%9F%E7%90%86%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:55.625Z" title="发表于 2026-09-24 20:16:55">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2026/09/24/%E7%9F%A5%E8%AF%86%E5%9B%BE%E8%B0%B1/Day02_AJAX%E5%AE%9E%E6%88%98%E8%BF%90%E7%94%A8%E5%A4%8D%E4%B9%A0%E5%9B%BE%E8%B0%B1/" title="无标题">无标题</a><time datetime="2026-09-24T12:16:50.362Z" title="发表于 2026-09-24 20:16:50">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/" title="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理"/></a><div class="content"><a class="title" href="/2026/09/24/%E6%B7%B1%E5%85%A5Promise%E4%B8%8Eaxios%E5%8E%9F%E7%90%86/" title="深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理">深入 Promise：从回调地狱到 async/await，看懂 axios 内部原理</a><time datetime="2026-09-24T10:00:00.000Z" title="发表于 2026-09-24 18:00:00">2026-09-24</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="axios 实战：增删改查、图片上传与本地缓存"/></a><div class="content"><a class="title" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存">axios 实战：增删改查、图片上传与本地缓存</a><time datetime="2026-09-24T09:00:00.000Z" title="发表于 2026-09-24 17:00:00">2026-09-24</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
