@@ -1,15 +1,54 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1D2B64"/>
-      <stop offset="55%" stop-color="#2B5876"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F1B33"/>
+      <stop offset="45%" stop-color="#1D2B64"/>
       <stop offset="100%" stop-color="#4E4376"/>
     </linearGradient>
+    <radialGradient id="glowA" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#6E8BFF" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#6E8BFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#B78CFF" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#B78CFF" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
   </defs>
-  <rect width="1600" height="900" fill="url(#g)"/>
-  <circle cx="1250" cy="160" r="240" fill="#ffffff" opacity="0.07"/>
-  <circle cx="320" cy="720" r="300" fill="#ffffff" opacity="0.05"/>
-  <circle cx="880" cy="480" r="160" fill="#ffffff" opacity="0.04"/>
-  <circle cx="150" cy="150" r="90" fill="#ffffff" opacity="0.05"/>
-  <circle cx="1450" cy="760" r="120" fill="#ffffff" opacity="0.04"/>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#grid)"/>
+  <rect width="1600" height="900" fill="url(#fade)"/>
+
+  <!-- 大面积柔光 -->
+  <circle cx="1250" cy="180" r="480" fill="url(#glowA)"/>
+  <circle cx="320" cy="760" r="420" fill="url(#glowB)"/>
+  <circle cx="880" cy="450" r="260" fill="url(#glowA)"/>
+
+  <!-- 右上同心圆环 -->
+  <circle cx="1250" cy="160" r="80" fill="none" stroke="#ffffff" stroke-opacity="0.30" stroke-width="2"/>
+  <circle cx="1250" cy="160" r="140" fill="none" stroke="#ffffff" stroke-opacity="0.20" stroke-width="1.5"/>
+  <circle cx="1250" cy="160" r="210" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5" stroke-dasharray="8 10"/>
+
+  <!-- 左下点阵 -->
+  <g fill="#ffffff" fill-opacity="0.20">
+    <circle cx="180" cy="700" r="4"/><circle cx="250" cy="700" r="4"/><circle cx="320" cy="700" r="4"/><circle cx="390" cy="700" r="4"/><circle cx="460" cy="700" r="4"/>
+    <circle cx="180" cy="755" r="4"/><circle cx="250" cy="755" r="4"/><circle cx="320" cy="755" r="4"/><circle cx="390" cy="755" r="4"/><circle cx="460" cy="755" r="4"/>
+    <circle cx="180" cy="810" r="4"/><circle cx="250" cy="810" r="4"/><circle cx="320" cy="810" r="4"/><circle cx="390" cy="810" r="4"/><circle cx="460" cy="810" r="4"/>
+  </g>
+
+  <!-- 流动曲线 -->
+  <path d="M -20 560 C 400 440, 760 700, 1200 500 S 1500 380, 1620 430" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="2.5"/>
+  <path d="M -20 640 C 460 520, 840 780, 1280 580 S 1520 460, 1620 510" fill="none" stroke="#ffffff" stroke-opacity="0.09" stroke-width="2"/>
+
+  <!-- 右下六边形线框 -->
+  <path d="M 1420 700 L 1500 750 L 1500 830 L 1420 880 L 1340 830 L 1340 750 Z" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="2"/>
+  <!-- 左上小六边形线框 -->
+  <path d="M 130 120 L 190 155 L 190 220 L 130 255 L 70 220 L 70 155 Z" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
 </svg>
