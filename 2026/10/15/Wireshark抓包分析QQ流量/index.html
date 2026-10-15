@@ -1,0 +1,615 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复 | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="一次网络流量分析实验的完整记录。用 Wireshark 抓取 QQ 的通信流量，回答三个问题：QQ 用 UDP 还是 TCP？通信是加密还是明文？能不能从流量里恢复出明文文件？顺带把 QQ 私有协议的报文结构拆了一遍，还发现了一个隐私问题。   一、实验目的本次实验要回答三个问题：  QQ 传输数据用的是 UDP 还是 TCP？ QQ 的通信是加密还是明文？ 能否从抓到的流量中恢复出明文传输的文">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复">
+<meta property="og:url" content="https://quanpp.github.io/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="一次网络流量分析实验的完整记录。用 Wireshark 抓取 QQ 的通信流量，回答三个问题：QQ 用 UDP 还是 TCP？通信是加密还是明文？能不能从流量里恢复出明文文件？顺带把 QQ 私有协议的报文结构拆了一遍，还发现了一个隐私问题。   一、实验目的本次实验要回答三个问题：  QQ 传输数据用的是 UDP 还是 TCP？ QQ 的通信是加密还是明文？ 能否从抓到的流量中恢复出明文传输的文">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover1.svg">
+<meta property="article:published_time" content="2026-10-15T12:30:00.000Z">
+<meta property="article:modified_time" content="2026-10-15T12:53:35.734Z">
+<meta property="article:author" content="PP">
+<meta property="article:tag" content="QQ协议">
+<meta property="article:tag" content="Wireshark">
+<meta property="article:tag" content="抓包">
+<meta property="article:tag" content="流量分析">
+<meta property="article:tag" content="网络安全">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover1.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复",
+  "url": "https://quanpp.github.io/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/",
+  "image": "https://quanpp.github.io/img/cover1.svg",
+  "datePublished": "2026-10-15T12:30:00.000Z",
+  "dateModified": "2026-10-15T12:53:35.734Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  html { scroll-behavior: smooth; }
+  /* 头像悬停旋转一周 */
+  .card-info .avatar-img img { transition: transform .6s ease; }
+  .card-info .avatar-img:hover img { transform: rotate(360deg) scale(1.08); }
+  /* 首页大图标题微光晕，提升可读性 */
+  #site-title { text-shadow: 0 2px 12px rgba(0,0,0,.35); }
+  /* 文章标题更醒目 */
+  #article-container h1, #article-container h2, #article-container h3 { font-weight: 700; }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">17</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">51</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/cover1.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-15T12:30:00.000Z" title="发表于 2026-10-15 20:30:00">2026-10-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-15T12:53:35.734Z" title="更新于 2026-10-15 20:53:35">2026-10-15</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>一次网络流量分析实验的完整记录。用 Wireshark 抓取 QQ 的通信流量，回答三个问题：QQ 用 UDP 还是 TCP？通信是加密还是明文？能不能从流量里恢复出明文文件？顺带把 QQ 私有协议的报文结构拆了一遍，还发现了一个隐私问题。</p>
+</blockquote>
+<hr>
+<h2 id="一、实验目的"><a href="#一、实验目的" class="headerlink" title="一、实验目的"></a>一、实验目的</h2><p>本次实验要回答三个问题：</p>
+<ol>
+<li>QQ 传输数据用的是 <strong>UDP 还是 TCP</strong>？</li>
+<li>QQ 的通信是<strong>加密还是明文</strong>？</li>
+<li>能否从抓到的流量中<strong>恢复出明文传输的文件</strong>？</li>
+</ol>
+<p>实验还额外做了一件事：把 QQ 的私有协议报文逐字节拆开，看看它的”信封”和”内容”分别是什么。</p>
+<hr>
+<h2 id="二、实验环境与网络拓扑"><a href="#二、实验环境与网络拓扑" class="headerlink" title="二、实验环境与网络拓扑"></a>二、实验环境与网络拓扑</h2><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>配置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>操作系统</td>
+<td>Windows 11</td>
+</tr>
+<tr>
+<td>抓包工具</td>
+<td>Wireshark（Npcap 驱动）</td>
+</tr>
+<tr>
+<td>QQ 版本</td>
+<td>NTQQ（Windows 桌面版）</td>
+</tr>
+<tr>
+<td>抓包网卡</td>
+<td>移动热点虚拟适配器 + WLAN</td>
+</tr>
+<tr>
+<td>测试设备</td>
+<td>电脑一台 + 手机一部</td>
+</tr>
+</tbody></table>
+<h3 id="2-1-拓扑怎么搭：一个反直觉的坑"><a href="#2-1-拓扑怎么搭：一个反直觉的坑" class="headerlink" title="2.1 拓扑怎么搭：一个反直觉的坑"></a>2.1 拓扑怎么搭：一个反直觉的坑</h3><p>一开始我想当然地让<strong>手机开热点、电脑连上去</strong>抓包，结果什么都抓不到。</p>
+<p>后来才想明白原因：</p>
+<ul>
+<li>手机开热点时，手机自己的流量是<strong>直接从手机出网</strong>的，根本不经过电脑；</li>
+<li>电脑作为热点客户端，只能看到<strong>自己</strong>的收发流量。</li>
+</ul>
+<p><strong>方向反了。</strong> 正确做法是<strong>电脑开热点、手机连上来</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">手机（192.168.137.213）</span><br><span class="line">      ↓ 连接热点</span><br><span class="line">电脑移动热点网卡（192.168.137.1）</span><br><span class="line">      ↓ NAT 转发</span><br><span class="line">   互联网（QQ 服务器）</span><br></pre></td></tr></table></figure>
+
+<p>这样手机的流量才会经过电脑的网卡，才能被抓到。</p>
+<h3 id="2-2-关键：搞清楚”该抓哪块网卡”"><a href="#2-2-关键：搞清楚”该抓哪块网卡”" class="headerlink" title="2.2 关键：搞清楚”该抓哪块网卡”"></a>2.2 关键：搞清楚”该抓哪块网卡”</h3><p>这是本次实验最容易踩的坑。开完热点后，电脑上会多出一块虚拟适配器：</p>
+<table>
+<thead>
+<tr>
+<th>网卡</th>
+<th>IP</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本地连接* 10</td>
+<td>192.168.137.1</td>
+<td><strong>移动热点虚拟适配器</strong>（手机的流量走这里）</td>
+</tr>
+<tr>
+<td>WLAN</td>
+<td>192.168.3.209</td>
+<td>物理无线网卡（电脑自己出网走这里）</td>
+</tr>
+<tr>
+<td>VMware VMnet1&#x2F;8</td>
+<td>192.168.x.1</td>
+<td>虚拟机网卡，忽略</td>
+</tr>
+</tbody></table>
+<p><strong>重点来了</strong>：电脑上自己运行的 QQ，流量是走 <strong>WLAN</strong> 出网的，<strong>不经过热点网卡</strong>。</p>
+<p>所以：</p>
+<ul>
+<li>想抓<strong>手机</strong>的 QQ → 抓 <code>本地连接* 10</code></li>
+<li>想抓<strong>电脑</strong>的 QQ → 抓 <code>WLAN</code></li>
+<li>想全都要 → 两块网卡一起抓</li>
+</ul>
+<p>用 <code>ipconfig</code> 确认热点网卡的地址段：Windows 移动热点的默认网段固定是 <code>192.168.137.x</code>，认准这个就不会选错。</p>
+<hr>
+<h2 id="三、第一步：在茫茫流量里定位-QQ"><a href="#三、第一步：在茫茫流量里定位-QQ" class="headerlink" title="三、第一步：在茫茫流量里定位 QQ"></a>三、第一步：在茫茫流量里定位 QQ</h2><p>抓包最难的从来不是”抓”，而是”找”。几千个包里怎么定位到 QQ 的？</p>
+<h3 id="3-1-别猜-IP，直接问系统要"><a href="#3-1-别猜-IP，直接问系统要" class="headerlink" title="3.1 别猜 IP，直接问系统要"></a>3.1 别猜 IP，直接问系统要</h3><p>一开始我按手机 IP 过滤，结果看到的多是各种杂流量。后来发现一个更聪明的办法——<strong>直接查 QQ 进程正在连哪些服务器</strong>：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">Get-NetTCPConnection</span> <span class="literal">-State</span> Established |</span><br><span class="line">  <span class="built_in">Where-Object</span> &#123; (<span class="built_in">Get-Process</span> <span class="literal">-Id</span> <span class="variable">$_</span>.OwningProcess).ProcessName <span class="operator">-match</span> <span class="string">&#x27;QQ&#x27;</span> &#125; |</span><br><span class="line">  <span class="built_in">Select-Object</span> RemoteAddress, RemotePort</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">RemoteAddress  RemotePort</span><br><span class="line">-------------  ----------</span><br><span class="line">120.232.65.165      14000</span><br></pre></td></tr></table></figure>
+
+<p>一句话就拿到了 QQ 的服务器 IP 和端口。</p>
+<blockquote>
+<p><code>120.232.65.165</code> 是腾讯的服务器，<code>14000</code> 是腾讯服务常用端口。拿到 IP 后，在 Wireshark 里直接按它过滤就行。</p>
+</blockquote>
+<h3 id="3-2-过滤器怎么写"><a href="#3-2-过滤器怎么写" class="headerlink" title="3.2 过滤器怎么写"></a>3.2 过滤器怎么写</h3><p>拿到服务器 IP 后，过滤器就很简单了：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip.addr == 120.232.65.165</span><br></pre></td></tr></table></figure>
+
+<p>这条会<strong>双向</strong>保留所有和该服务器通信的包。如果只想看手机发出的，用 <code>ip.src</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ip.src == 192.168.xxx</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="四、问题一：QQ-用-UDP-还是-TCP？"><a href="#四、问题一：QQ-用-UDP-还是-TCP？" class="headerlink" title="四、问题一：QQ 用 UDP 还是 TCP？"></a>四、问题一：QQ 用 UDP 还是 TCP？</h2><p><strong>结论：当前版本的 QQ 主要使用 TCP。</strong></p>
+<p>证据有两条：</p>
+<p><strong>证据 1</strong>：上面那条 PowerShell 命令用的是 <code>Get-NetTCPConnection</code>，能列出连接，说明 QQ 建立的是 TCP 连接。</p>
+<p><strong>证据 2</strong>：Wireshark 抓到的包，协议列全是 <code>TCP</code>，且报文带有<strong>长度前缀</strong>和<strong>递增序号</strong>——这是可靠传输的典型特征，UDP 不会这样。</p>
+<p>再统计一下整体协议分布：<strong>统计 → 协议分级</strong>，可以看到 QQ 相关流量几乎全在 TCP 上。</p>
+<img src="/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/tcp.png" class="" title="协议分级图">
+
+<blockquote>
+<p>⚠️ 注意：网上有些老教程会说”QQ 文件传输采用 TCP 和 UDP 的传输方式”，那说的是<strong>老版本 QQ</strong>（OICQ 协议时代，会用到 UDP 8000&#x2F;4000 端口）。新版 NTQQ 已经统一收敛到 TCP 443 等端口了。</p>
+</blockquote>
+<hr>
+<h2 id="五、问题二：加密还是明文？"><a href="#五、问题二：加密还是明文？" class="headerlink" title="五、问题二：加密还是明文？"></a>五、问题二：加密还是明文？</h2><p><strong>结论：混合模式——“信封”明文，”内容”加密。</strong></p>
+<p>这个结论比简单的”加密了”更有意思。判断方法很简单：<strong>右键任意一个包 → 追踪 → TCP 流</strong>，然后把底部”显示数据为”切到<strong>原始数据</strong>。</p>
+<ul>
+<li>如果能看到可读文字 → 明文</li>
+<li>如果全是乱码 → 加密</li>
+</ul>
+<p>QQ 的情况是：<strong>应用层数据加密，但协议元数据明文</strong>。</p>
+<h3 id="5-1-TLS-握手里暴露的明文"><a href="#5-1-TLS-握手里暴露的明文" class="headerlink" title="5.1 TLS 握手里暴露的明文"></a>5.1 TLS 握手里暴露的明文</h3><p>抓到的包里有一段是标准的 TLS 握手：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">16 03 03 ... 01 00 01 fc 03 03 ...</span><br></pre></td></tr></table></figure>
+
+<p>开头 <code>16 03 03</code> 是 TLS 握手记录。虽然应用数据加密了，但<strong>握手里的 SNI（服务器名称指示）是明文</strong>的，可以直接读出域名：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">xuip.tlogin2.qq.com</span><br></pre></td></tr></table></figure>
+
+<p><code>tlogin2.qq.com</code> 是 QQ 的登录服务器。这说明：<strong>即使加密，你也知道它连了谁。</strong></p>
+<h3 id="5-2-怎么判断一个包是不是加密流量"><a href="#5-2-怎么判断一个包是不是加密流量" class="headerlink" title="5.2 怎么判断一个包是不是加密流量"></a>5.2 怎么判断一个包是不是加密流量</h3><p>记住这几个开头的字节：</p>
+<table>
+<thead>
+<tr>
+<th>开头字节</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>16 03 01</code> &#x2F; <code>16 03 03</code></td>
+<td>TLS 握手（加密）</td>
+</tr>
+<tr>
+<td><code>17 03 03</code></td>
+<td>TLS 应用数据（加密）</td>
+</tr>
+<tr>
+<td><code>50 4B 03 04</code></td>
+<td>ZIP 文件（<strong>明文</strong>）</td>
+</tr>
+<tr>
+<td><code>89 50 4E 47</code></td>
+<td>PNG 图片（<strong>明文</strong>）</td>
+</tr>
+</tbody></table>
+<p>看到 <code>16 03</code> 开头，基本就是加密了。</p>
+<hr>
+<h2 id="六、问题三：能否恢复明文文件？"><a href="#六、问题三：能否恢复明文文件？" class="headerlink" title="六、问题三：能否恢复明文文件？"></a>六、问题三：能否恢复明文文件？</h2><p><strong>结论：不能。</strong></p>
+<p>思路是这样的：不同文件类型有固定的<strong>文件头特征码</strong>，如果文件是明文传输，就能在十六进制流里搜到它。</p>
+<p>常见文件头：</p>
+<table>
+<thead>
+<tr>
+<th>文件类型</th>
+<th>特征码（十六进制）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JPEG 图片</td>
+<td><code>FF D8 FF</code></td>
+</tr>
+<tr>
+<td>PNG 图片</td>
+<td><code>89 50 4E 47</code></td>
+</tr>
+<tr>
+<td>GIF 图片</td>
+<td><code>47 49 46 38</code></td>
+</tr>
+<tr>
+<td>ZIP &#x2F; DOCX &#x2F; XLSX</td>
+<td><code>50 4B 03 04</code></td>
+</tr>
+<tr>
+<td>PDF 文档</td>
+<td><code>25 50 44 46</code></td>
+</tr>
+</tbody></table>
+<p>操作：<code>编辑 → 查找分组</code>（快捷键 <code>Ctrl+Shift+F</code>），搜索类型选 <strong>“十六进制值”</strong>，输入特征码。</p>
+<p><strong>我在抓到的全部数据里把这 5 个特征码都搜了一遍，全部未命中。</strong></p>
+<p>这恰好印证了第五节的结论：文件内容被封装在加密载荷里，从流量中无法直接恢复。</p>
+<blockquote>
+<p>⚠️ 补充一个版本差异：有资料显示<strong>老版本 QQ 的私聊传图是可以恢复的</strong>——搜到 <code>FF D8</code> 后追踪 TCP 流、另存为 <code>.jpg</code>，再用十六进制编辑器删掉文件头之前的字节即可还原。但新版 NTQQ 已经全链路加密，这条路走不通了。<strong>能不能恢复，取决于 QQ 版本。</strong></p>
+</blockquote>
+<hr>
+<h2 id="七、进阶：拆解-QQ-私有协议报文"><a href="#七、进阶：拆解-QQ-私有协议报文" class="headerlink" title="七、进阶：拆解 QQ 私有协议报文"></a>七、进阶：拆解 QQ 私有协议报文</h2><p>既然文件恢复不了，那就换个角度——<strong>把它的报文结构拆开看看</strong>。</p>
+<p>把 QQ 的数据流切成十六进制视图，能发现这些包只有两种格式：</p>
+<h3 id="7-1-类型-A：带固定密文块"><a href="#7-1-类型-A：带固定密文块" class="headerlink" title="7.1 类型 A：带固定密文块"></a>7.1 类型 A：带固定密文块</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[4字节长度][4字节报文头 00 00 00 0c][4字节序号]</span><br><span class="line">[约88字节固定密文块]</span><br><span class="line">[账号串]</span><br><span class="line">[加密载荷]</span><br></pre></td></tr></table></figure>
+
+<p>有意思的是中间那段<strong>约 88 字节的密文块</strong>，在同一个会话的<strong>每个包里都完全相同</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">5c bf 4f 8b 03 82 3b 16 5d 0b fa 9f 5f 40 8b aa</span><br><span class="line">0a 14 b2 f0 e5 41 4e 79 d1 df 0b 67 cb 2e c1 69</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>说明这是<strong>会话级的固定字段</strong>（可能是会话令牌或握手后的固定头），而不是随内容变化的。</p>
+<h3 id="7-2-类型-B：带递增命令号"><a href="#7-2-类型-B：带递增命令号" class="headerlink" title="7.2 类型 B：带递增命令号"></a>7.2 类型 B：带递增命令号</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[4字节长度][4字节报文头 00 00 00 0d]</span><br><span class="line">[命令号]</span><br><span class="line">[账号串]</span><br><span class="line">[加密载荷]</span><br></pre></td></tr></table></figure>
+
+<p>这里的<strong>命令号是明文，而且严格递增</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>报文序号</th>
+<th>命令号（明文）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><code>01 00 01 3b a1</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>01 00 01 3b a3</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>01 00 01 3b a4</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>01 00 01 3b a5</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>01 00 01 3b a6</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>01 00 01 3b a7</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>01 00 01 3b a8</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>01 00 01 3b ac</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>01 00 01 3b ad</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>01 00 01 3b af</code></td>
+</tr>
+</tbody></table>
+<p><strong><code>3b a1 → 3b af</code> 一路递增。</strong> 也就是说，<strong>不需要解密，你就能数出这次通信交互了多少次、顺序是什么</strong>。</p>
+<h3 id="7-3-小结：QQ-只加密”内容”，不加密”信封”"><a href="#7-3-小结：QQ-只加密”内容”，不加密”信封”" class="headerlink" title="7.3 小结：QQ 只加密”内容”，不加密”信封”"></a>7.3 小结：QQ 只加密”内容”，不加密”信封”</h3><table>
+<thead>
+<tr>
+<th>部分</th>
+<th>是否明文</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>报文长度</td>
+<td>✅ 明文</td>
+</tr>
+<tr>
+<td>报文头 &#x2F; 类型</td>
+<td>✅ 明文</td>
+</tr>
+<tr>
+<td>命令序号</td>
+<td>✅ 明文</td>
+</tr>
+<tr>
+<td>账号标识</td>
+<td>✅ <strong>明文</strong></td>
+</tr>
+<tr>
+<td>业务载荷</td>
+<td>❌ 加密</td>
+</tr>
+</tbody></table>
+<img src="/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/wireshark.png" class="" title="十六进制图">
+
+<hr>
+<h2 id="八、意外的发现：明文传输的账号标识"><a href="#八、意外的发现：明文传输的账号标识" class="headerlink" title="八、意外的发现：明文传输的账号标识"></a>八、意外的发现：明文传输的账号标识</h2><p>拆包过程中还发现了一个<strong>隐私问题</strong>。</p>
+<p>在每个报文的协议头里，都有一段明文 ASCII 数字串，反复出现 20 多次：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">00 0e 33 31 31 31 36 32 33 34 34 31</span><br><span class="line">     └─ &quot;xxxxxxxxxx账号&quot;</span><br></pre></td></tr></table></figure>
+
+<p><code>0e</code> 是长度，后面是<strong>明文出现的账号标识</strong>。</p>
+<p>这意味着：<strong>即使用了加密传输，协议元数据（如账号）依然可能明文暴露。</strong> 中间人虽然读不到聊天内容，但能看到”谁在通信”。</p>
+<p>这也提醒了一件事——<strong>写博客时，这类信息必须打码。</strong></p>
+<hr>
+<h2 id="九、踩坑记录"><a href="#九、踩坑记录" class="headerlink" title="九、踩坑记录"></a>九、踩坑记录</h2><p>把这次实验踩的坑汇总一下，省得下次再犯：</p>
+<ol>
+<li><strong>热点方向搞反</strong>：手机开热点、电脑连 → 抓不到手机流量。必须<strong>电脑开热点、手机连</strong>。</li>
+<li><strong>网卡选错</strong>：电脑自己的 QQ 走 WLAN，不走热点网卡。想抓电脑 QQ 就得切到 WLAN。</li>
+<li><strong>手机 IP 会变</strong>：断开重连热点后 IP 和 MAC 都可能变，过滤器会失效，要重新 <code>arp -a</code> 确认。</li>
+<li><strong>包太多找不到</strong>：用”一个动作一次抓包”的办法，或者每个动作前后停顿 10 秒制造时间空白。</li>
+<li><strong>搜中文搜不到</strong>：消息内容加密，搜不到很正常。测试时用<strong>英文或数字串</strong>（如 <code>TEST123456</code>）。</li>
+<li><strong>文件头搜不到≠搜错了</strong>：搜不到恰恰是”已加密”的证据。</li>
+</ol>
+<hr>
+<h2 id="十、速查表"><a href="#十、速查表" class="headerlink" title="十、速查表"></a>十、速查表</h2><h3 id="10-1-Wireshark-常用过滤器"><a href="#10-1-Wireshark-常用过滤器" class="headerlink" title="10.1 Wireshark 常用过滤器"></a>10.1 Wireshark 常用过滤器</h3><table>
+<thead>
+<tr>
+<th>目的</th>
+<th>过滤器</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>按 IP 过滤（双向）</td>
+<td><code>ip.addr == 1.2.3.4</code></td>
+</tr>
+<tr>
+<td>只看源地址</td>
+<td><code>ip.src == 1.2.3.4</code></td>
+</tr>
+<tr>
+<td>只看目的地址</td>
+<td><code>ip.dst == 1.2.3.4</code></td>
+</tr>
+<tr>
+<td>只看 UDP</td>
+<td><code>udp</code></td>
+</tr>
+<tr>
+<td>只看 TCP</td>
+<td><code>tcp</code></td>
+</tr>
+<tr>
+<td>按端口过滤</td>
+<td><code>tcp.port == 443</code></td>
+</tr>
+<tr>
+<td>查 TLS 域名（SNI）</td>
+<td><code>tls.handshake.extensions_server_name contains &quot;qq&quot;</code></td>
+</tr>
+<tr>
+<td>查 DNS 域名</td>
+<td><code>dns.qry.name contains &quot;qq.com&quot;</code></td>
+</tr>
+<tr>
+<td>排除干扰协议</td>
+<td><code>ip.addr == 1.2.3.4 &amp;&amp; !dns &amp;&amp; !arp &amp;&amp; !mdns &amp;&amp; !nbss</code></td>
+</tr>
+</tbody></table>
+<h3 id="10-2-常见文件头特征码"><a href="#10-2-常见文件头特征码" class="headerlink" title="10.2 常见文件头特征码"></a>10.2 常见文件头特征码</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>十六进制</th>
+<th>搜索时连写</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JPEG</td>
+<td><code>FF D8 FF</code></td>
+<td><code>ffd8ff</code></td>
+</tr>
+<tr>
+<td>PNG</td>
+<td><code>89 50 4E 47</code></td>
+<td><code>89504e47</code></td>
+</tr>
+<tr>
+<td>GIF</td>
+<td><code>47 49 46 38</code></td>
+<td><code>47494638</code></td>
+</tr>
+<tr>
+<td>ZIP &#x2F; Office</td>
+<td><code>50 4B 03 04</code></td>
+<td><code>504b0304</code></td>
+</tr>
+<tr>
+<td>PDF</td>
+<td><code>25 50 44 46</code></td>
+<td><code>25504446</code></td>
+</tr>
+<tr>
+<td>RAR</td>
+<td><code>52 61 72 21</code></td>
+<td><code>52617221</code></td>
+</tr>
+<tr>
+<td>7z</td>
+<td><code>37 7A BC AF 27 1C</code></td>
+<td><code>377abcaf271c</code></td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这次实验的三个结论：</p>
+<ol>
+<li><strong>协议</strong>：新版 QQ 主要使用 <strong>TCP</strong>，不再依赖传统 UDP 端口。</li>
+<li><strong>加密</strong>：采&#x7528;<strong>“明文信封 + 加密内容”</strong>&#x7684;混合模式——报文长度、命令号、账号明文，业务载荷加密。</li>
+<li><strong>文件恢复</strong>：<strong>无法恢复</strong>，5 种常见文件头特征码全部未命中。</li>
+</ol>
+<hr>
+<p><em>本文为网络流量分析课程实验记录，所有实验均在自有设备和自有账号上进行，仅用于学习研究。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/">https://quanpp.github.io/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Wireshark/">Wireshark</a><a class="post-meta__tags" href="/tags/%E6%8A%93%E5%8C%85/">抓包</a><a class="post-meta__tags" href="/tags/%E6%B5%81%E9%87%8F%E5%88%86%E6%9E%90/">流量分析</a><a class="post-meta__tags" href="/tags/%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8/">网络安全</a><a class="post-meta__tags" href="/tags/QQ%E5%8D%8F%E8%AE%AE/">QQ协议</a></div><div class="post-share"><div class="social-share" data-image="/img/cover1.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/12/Webpack%20%E6%89%93%E5%8C%85%E5%B7%A5%E5%85%B7/" title="Webpack 打包工具：从入门配置到工程优化"><img class="cover" src="/img/cover2.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Webpack 打包工具：从入门配置到工程优化</div></div><div class="info-2"><div class="info-item-1">Webpack 完整入门：配置入口出口、loader 处理 CSS/LESS/图片、plugin 自动生成 HTML/提取 CSS、dev-server 热更新、打包模式、source map、CDN、多页面、公共代码提取。</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">17</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">51</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E5%AE%9E%E9%AA%8C%E7%9B%AE%E7%9A%84"><span class="toc-number">1.</span> <span class="toc-text">一、实验目的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E5%AE%9E%E9%AA%8C%E7%8E%AF%E5%A2%83%E4%B8%8E%E7%BD%91%E7%BB%9C%E6%8B%93%E6%89%91"><span class="toc-number">2.</span> <span class="toc-text">二、实验环境与网络拓扑</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E6%8B%93%E6%89%91%E6%80%8E%E4%B9%88%E6%90%AD%EF%BC%9A%E4%B8%80%E4%B8%AA%E5%8F%8D%E7%9B%B4%E8%A7%89%E7%9A%84%E5%9D%91"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 拓扑怎么搭：一个反直觉的坑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E5%85%B3%E9%94%AE%EF%BC%9A%E6%90%9E%E6%B8%85%E6%A5%9A%E2%80%9D%E8%AF%A5%E6%8A%93%E5%93%AA%E5%9D%97%E7%BD%91%E5%8D%A1%E2%80%9D"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 关键：搞清楚”该抓哪块网卡”</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E7%AC%AC%E4%B8%80%E6%AD%A5%EF%BC%9A%E5%9C%A8%E8%8C%AB%E8%8C%AB%E6%B5%81%E9%87%8F%E9%87%8C%E5%AE%9A%E4%BD%8D-QQ"><span class="toc-number">3.</span> <span class="toc-text">三、第一步：在茫茫流量里定位 QQ</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%88%AB%E7%8C%9C-IP%EF%BC%8C%E7%9B%B4%E6%8E%A5%E9%97%AE%E7%B3%BB%E7%BB%9F%E8%A6%81"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 别猜 IP，直接问系统要</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E8%BF%87%E6%BB%A4%E5%99%A8%E6%80%8E%E4%B9%88%E5%86%99"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 过滤器怎么写</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E9%97%AE%E9%A2%98%E4%B8%80%EF%BC%9AQQ-%E7%94%A8-UDP-%E8%BF%98%E6%98%AF-TCP%EF%BC%9F"><span class="toc-number">4.</span> <span class="toc-text">四、问题一：QQ 用 UDP 还是 TCP？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E9%97%AE%E9%A2%98%E4%BA%8C%EF%BC%9A%E5%8A%A0%E5%AF%86%E8%BF%98%E6%98%AF%E6%98%8E%E6%96%87%EF%BC%9F"><span class="toc-number">5.</span> <span class="toc-text">五、问题二：加密还是明文？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-TLS-%E6%8F%A1%E6%89%8B%E9%87%8C%E6%9A%B4%E9%9C%B2%E7%9A%84%E6%98%8E%E6%96%87"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 TLS 握手里暴露的明文</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E6%80%8E%E4%B9%88%E5%88%A4%E6%96%AD%E4%B8%80%E4%B8%AA%E5%8C%85%E6%98%AF%E4%B8%8D%E6%98%AF%E5%8A%A0%E5%AF%86%E6%B5%81%E9%87%8F"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 怎么判断一个包是不是加密流量</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E9%97%AE%E9%A2%98%E4%B8%89%EF%BC%9A%E8%83%BD%E5%90%A6%E6%81%A2%E5%A4%8D%E6%98%8E%E6%96%87%E6%96%87%E4%BB%B6%EF%BC%9F"><span class="toc-number">6.</span> <span class="toc-text">六、问题三：能否恢复明文文件？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E8%BF%9B%E9%98%B6%EF%BC%9A%E6%8B%86%E8%A7%A3-QQ-%E7%A7%81%E6%9C%89%E5%8D%8F%E8%AE%AE%E6%8A%A5%E6%96%87"><span class="toc-number">7.</span> <span class="toc-text">七、进阶：拆解 QQ 私有协议报文</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E7%B1%BB%E5%9E%8B-A%EF%BC%9A%E5%B8%A6%E5%9B%BA%E5%AE%9A%E5%AF%86%E6%96%87%E5%9D%97"><span class="toc-number">7.1.</span> <span class="toc-text">7.1 类型 A：带固定密文块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-%E7%B1%BB%E5%9E%8B-B%EF%BC%9A%E5%B8%A6%E9%80%92%E5%A2%9E%E5%91%BD%E4%BB%A4%E5%8F%B7"><span class="toc-number">7.2.</span> <span class="toc-text">7.2 类型 B：带递增命令号</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E5%B0%8F%E7%BB%93%EF%BC%9AQQ-%E5%8F%AA%E5%8A%A0%E5%AF%86%E2%80%9D%E5%86%85%E5%AE%B9%E2%80%9D%EF%BC%8C%E4%B8%8D%E5%8A%A0%E5%AF%86%E2%80%9D%E4%BF%A1%E5%B0%81%E2%80%9D"><span class="toc-number">7.3.</span> <span class="toc-text">7.3 小结：QQ 只加密”内容”，不加密”信封”</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E6%84%8F%E5%A4%96%E7%9A%84%E5%8F%91%E7%8E%B0%EF%BC%9A%E6%98%8E%E6%96%87%E4%BC%A0%E8%BE%93%E7%9A%84%E8%B4%A6%E5%8F%B7%E6%A0%87%E8%AF%86"><span class="toc-number">8.</span> <span class="toc-text">八、意外的发现：明文传输的账号标识</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E8%B8%A9%E5%9D%91%E8%AE%B0%E5%BD%95"><span class="toc-number">9.</span> <span class="toc-text">九、踩坑记录</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">10.</span> <span class="toc-text">十、速查表</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-Wireshark-%E5%B8%B8%E7%94%A8%E8%BF%87%E6%BB%A4%E5%99%A8"><span class="toc-number">10.1.</span> <span class="toc-text">10.1 Wireshark 常用过滤器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E5%B8%B8%E8%A7%81%E6%96%87%E4%BB%B6%E5%A4%B4%E7%89%B9%E5%BE%81%E7%A0%81"><span class="toc-number">10.2.</span> <span class="toc-text">10.2 常见文件头特征码</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">11.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/" title="Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复"/></a><div class="content"><a class="title" href="/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/" title="Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复">Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复</a><time datetime="2026-10-15T12:30:00.000Z" title="发表于 2026-10-15 20:30:00">2026-10-15</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/12/Webpack%20%E6%89%93%E5%8C%85%E5%B7%A5%E5%85%B7/" title="Webpack 打包工具：从入门配置到工程优化"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Webpack 打包工具：从入门配置到工程优化"/></a><div class="content"><a class="title" href="/2026/10/12/Webpack%20%E6%89%93%E5%8C%85%E5%B7%A5%E5%85%B7/" title="Webpack 打包工具：从入门配置到工程优化">Webpack 打包工具：从入门配置到工程优化</a><time datetime="2026-10-12T07:00:00.000Z" title="发表于 2026-10-12 15:00:00">2026-10-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/12/Node.js%20%E5%85%A5%E9%97%A8/" title="Node.js 入门：从运行环境到模块化与 npm"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Node.js 入门：从运行环境到模块化与 npm"/></a><div class="content"><a class="title" href="/2026/10/12/Node.js%20%E5%85%A5%E9%97%A8/" title="Node.js 入门：从运行环境到模块化与 npm">Node.js 入门：从运行环境到模块化与 npm</a><time datetime="2026-10-12T06:00:00.000Z" title="发表于 2026-10-12 14:00:00">2026-10-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/12/Python%E7%AC%94%E8%AE%B0-%E4%B8%93%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%88%AC%E8%99%AB/" title="Python 网络爬虫实战：从 requests 到多线程爬虫"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Python 网络爬虫实战：从 requests 到多线程爬虫"/></a><div class="content"><a class="title" href="/2026/10/12/Python%E7%AC%94%E8%AE%B0-%E4%B8%93%E9%A2%98-%E7%BD%91%E7%BB%9C%E7%88%AC%E8%99%AB/" title="Python 网络爬虫实战：从 requests 到多线程爬虫">Python 网络爬虫实战：从 requests 到多线程爬虫</a><time datetime="2026-10-12T02:10:00.000Z" title="发表于 2026-10-12 10:10:00">2026-10-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/12/Python%E7%AC%94%E8%AE%B0-ch8-%E5%A4%9A%E8%BF%9B%E7%A8%8B%E5%92%8C%E5%A4%9A%E7%BA%BF%E7%A8%8B/" title="Python 多进程与多线程：从 GIL 到子域名爆破"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Python 多进程与多线程：从 GIL 到子域名爆破"/></a><div class="content"><a class="title" href="/2026/10/12/Python%E7%AC%94%E8%AE%B0-ch8-%E5%A4%9A%E8%BF%9B%E7%A8%8B%E5%92%8C%E5%A4%9A%E7%BA%BF%E7%A8%8B/" title="Python 多进程与多线程：从 GIL 到子域名爆破">Python 多进程与多线程：从 GIL 到子域名爆破</a><time datetime="2026-10-12T02:00:00.000Z" title="发表于 2026-10-12 10:00:00">2026-10-12</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
