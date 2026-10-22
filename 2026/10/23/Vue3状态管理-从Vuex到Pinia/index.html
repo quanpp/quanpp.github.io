@@ -1,0 +1,702 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Vue3 状态管理：从 Vuex 到 Pinia | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Vue 系列第四篇：Vuex 四大件与辅助函数（读旧代码用）、Pinia 两种写法、storeToRefs、持久化、Vuex 到 Pinia 迁移对照表，附购物车实战与速查表。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Vue3 状态管理：从 Vuex 到 Pinia">
+<meta property="og:url" content="https://quanpp.github.io/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="Vue 系列第四篇：Vuex 四大件与辅助函数（读旧代码用）、Pinia 两种写法、storeToRefs、持久化、Vuex 到 Pinia 迁移对照表，附购物车实战与速查表。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover2.svg">
+<meta property="article:published_time" content="2026-10-23T06:00:00.000Z">
+<meta property="article:modified_time" content="2026-10-22T12:24:27.844Z">
+<meta property="article:author" content="PP">
+<meta property="article:tag" content="Pinia">
+<meta property="article:tag" content="Vue">
+<meta property="article:tag" content="Vue3">
+<meta property="article:tag" content="Vuex">
+<meta property="article:tag" content="前端教程">
+<meta property="article:tag" content="实战">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover2.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Vue3 状态管理：从 Vuex 到 Pinia",
+  "url": "https://quanpp.github.io/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/",
+  "image": "https://quanpp.github.io/img/cover2.svg",
+  "datePublished": "2026-10-23T06:00:00.000Z",
+  "dateModified": "2026-10-22T12:24:27.844Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Vue3 状态管理：从 Vuex 到 Pinia',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  html { scroll-behavior: smooth; }
+  /* 头像悬停旋转一周 */
+  .card-info .avatar-img img { transition: transform .6s ease; }
+  .card-info .avatar-img:hover img { transform: rotate(360deg) scale(1.08); }
+  /* 首页大图标题微光晕，提升可读性 */
+  #site-title { text-shadow: 0 2px 12px rgba(0,0,0,.35); }
+  /* 文章标题更醒目 */
+  #article-container h1, #article-container h2, #article-container h3 { font-weight: 700; }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/cover2.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Vue3 状态管理：从 Vuex 到 Pinia</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Vue3 状态管理：从 Vuex 到 Pinia</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-23T06:00:00.000Z" title="发表于 2026-10-23 14:00:00">2026-10-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-22T12:24:27.844Z" title="更新于 2026-10-22 20:24:27">2026-10-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>Vue 系列第四篇。前三篇讲的是”一个页面”和”多个页面”，这篇解决”多个页面要共享同一份数据”：<strong>购物车在首页加了商品，购物车页面得立刻看到</strong>。学完你会知道：什么时候该上状态管理、Vuex 的四大件各自管什么（读旧代码必备）、为什么 <code>mutations</code> 必须同步、Pinia 砍掉了哪些概念、<code>storeToRefs</code> 到底在解决什么、持久化怎么一行配完，以及一张能直接照着改旧项目的迁移对照表。文末附购物车实战和速查表。</p>
+</blockquote>
+<hr>
+<h2 id="一、先问一句：真的需要状态管理吗"><a href="#一、先问一句：真的需要状态管理吗" class="headerlink" title="一、先问一句：真的需要状态管理吗"></a>一、先问一句：真的需要状态管理吗</h2><h3 id="1-1-问题是怎么出现的"><a href="#1-1-问题是怎么出现的" class="headerlink" title="1.1 问题是怎么出现的"></a>1.1 问题是怎么出现的</h3><p>首页有个购物车角标，显示商品数量。购物车页面能加能删。两个页面不在同一棵组件树里。</p>
+<p><strong>方案一：props 一层层传。</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">App（存 cartList）</span><br><span class="line"> ├── Header（要数量）      ← props 传</span><br><span class="line"> └── CartView（要增删）    ← props 传 + emit 回传</span><br></pre></td></tr></table></figure>
+
+<p>两个页面还好。等”商品详情页”也要加购、”订单页”也要读、”个人中心”也要显示数量——<strong>props 和 emit 会织成一张网</strong>，改一处牵动五处。</p>
+<p><strong>方案二：把数据挂在全局。</strong></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">window</span>.<span class="property">cartList</span> = []</span><br></pre></td></tr></table></figure>
+
+<p>能跑，但没有任何约束：谁都能改、什么时候改的不知道、改错了没法回溯。</p>
+<p>状态管理就是<strong>给这份共享数据立规矩</strong>：数据放一个地方，读有固定写法，改有唯一入口，变了能被追踪。</p>
+<h3 id="1-2-什么时候该用"><a href="#1-2-什么时候该用" class="headerlink" title="1.2 什么时候该用"></a>1.2 什么时候该用</h3><table>
+<thead>
+<tr>
+<th>情况</th>
+<th>用什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>父子传值</td>
+<td>props &#x2F; emit</td>
+</tr>
+<tr>
+<td>隔几层传值</td>
+<td>provide &#x2F; inject</td>
+</tr>
+<tr>
+<td><strong>跨页面共享、多组件读写</strong></td>
+<td><strong>状态管理</strong></td>
+</tr>
+<tr>
+<td>只在当前页面用的临时状态</td>
+<td>组件内 <code>ref</code></td>
+</tr>
+</tbody></table>
+<p>判断标准：<strong>这份数据是不是”不属于任何一个组件”？</strong> 购物车不属于首页，也不属于购物车页，它属于整个应用——那就该进 store。</p>
+<blockquote>
+<p>别一上来就上 Pinia。一个页面里的表单状态、弹窗开关，放组件里就行。<strong>状态管理用多了，比不用更乱。</strong></p>
+</blockquote>
+<hr>
+<h2 id="二、Vuex：先认识它，才能看懂旧项目"><a href="#二、Vuex：先认识它，才能看懂旧项目" class="headerlink" title="二、Vuex：先认识它，才能看懂旧项目"></a>二、Vuex：先认识它，才能看懂旧项目</h2><p>Vuex 是 Vue2 时代的官方方案。新项目不用它了，但公司里的旧代码全是它——花几分钟把概念过一遍。</p>
+<h3 id="2-1-四大核心概念"><a href="#2-1-四大核心概念" class="headerlink" title="2.1 四大核心概念"></a>2.1 四大核心概念</h3><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>干什么</th>
+<th>类比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>state</code></td>
+<td>存放共享数据</td>
+<td>组件的 <code>data</code></td>
+</tr>
+<tr>
+<td><code>mutations</code></td>
+<td><strong>同步</strong>修改 state 的方法</td>
+<td>改数据的唯一入口</td>
+</tr>
+<tr>
+<td><code>getters</code></td>
+<td>从 state 派生数据</td>
+<td><code>computed</code></td>
+</tr>
+<tr>
+<td><code>actions</code></td>
+<td><strong>异步</strong>操作，内部提交 mutations</td>
+<td>发请求的地方</td>
+</tr>
+</tbody></table>
+<p>一句话串起来：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">组件 dispatch → action（异步，发请求）→ commit → mutation（同步，改数据）→ state → 视图更新</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-创建仓库"><a href="#2-2-创建仓库" class="headerlink" title="2.2 创建仓库"></a>2.2 创建仓库</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/store/index.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; createStore &#125; <span class="keyword">from</span> <span class="string">&#x27;vuex&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="title function_">createStore</span>(&#123;</span><br><span class="line">  <span class="attr">state</span>: &#123;</span><br><span class="line">    <span class="attr">count</span>: <span class="number">0</span>,</span><br><span class="line">    <span class="attr">cartList</span>: []</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  <span class="attr">getters</span>: &#123;</span><br><span class="line">    <span class="comment">// 派生数据，相当于 computed</span></span><br><span class="line">    <span class="title function_">totalPrice</span> (state) &#123;</span><br><span class="line">      <span class="keyword">return</span> state.<span class="property">cartList</span>.<span class="title function_">reduce</span>(<span class="function">(<span class="params">sum, item</span>) =&gt;</span> sum + item.<span class="property">price</span> * item.<span class="property">num</span>, <span class="number">0</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  <span class="attr">mutations</span>: &#123;</span><br><span class="line">    <span class="comment">// 同步改数据，第一个参数是 state</span></span><br><span class="line">    <span class="title function_">addCount</span> (state, num) &#123;</span><br><span class="line">      state.<span class="property">count</span> += num</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  <span class="attr">actions</span>: &#123;</span><br><span class="line">    <span class="comment">// 异步操作，通过 commit 提交 mutation</span></span><br><span class="line">    <span class="keyword">async</span> <span class="title function_">fetchCart</span> (&#123; commit &#125;) &#123;</span><br><span class="line">      <span class="keyword">const</span> res = <span class="keyword">await</span> request.<span class="title function_">get</span>(<span class="string">&#x27;/cart&#x27;</span>)</span><br><span class="line">      <span class="title function_">commit</span>(<span class="string">&#x27;setCart&#x27;</span>, res.<span class="property">data</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// main.js</span></span><br><span class="line"><span class="keyword">import</span> store <span class="keyword">from</span> <span class="string">&#x27;./store&#x27;</span></span><br><span class="line"><span class="title function_">createApp</span>(<span class="title class_">App</span>).<span class="title function_">use</span>(store).<span class="title function_">mount</span>(<span class="string">&#x27;#app&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-读和改"><a href="#2-3-读和改" class="headerlink" title="2.3 读和改"></a>2.3 读和改</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 读 state</span></span><br><span class="line"><span class="variable language_">this</span>.<span class="property">$store</span>.<span class="property">state</span>.<span class="property">count</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 读 getters</span></span><br><span class="line"><span class="variable language_">this</span>.<span class="property">$store</span>.<span class="property">getters</span>.<span class="property">totalPrice</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 改：必须 commit mutation</span></span><br><span class="line"><span class="variable language_">this</span>.<span class="property">$store</span>.<span class="title function_">commit</span>(<span class="string">&#x27;addCount&#x27;</span>, <span class="number">5</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 异步：dispatch action</span></span><br><span class="line"><span class="variable language_">this</span>.<span class="property">$store</span>.<span class="title function_">dispatch</span>(<span class="string">&#x27;fetchCart&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>组合式 API 里用 <code>useStore()</code>：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; useStore &#125; <span class="keyword">from</span> <span class="string">&#x27;vuex&#x27;</span></span><br><span class="line"><span class="keyword">const</span> store = <span class="title function_">useStore</span>()</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(store.<span class="property">state</span>.<span class="property">count</span>)</span><br><span class="line">store.<span class="title function_">commit</span>(<span class="string">&#x27;addCount&#x27;</span>, <span class="number">5</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-三条规矩"><a href="#2-4-三条规矩" class="headerlink" title="2.4 三条规矩"></a>2.4 三条规矩</h3><p><strong>规矩一：state 不能直接改。</strong></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">store.<span class="property">state</span>.<span class="property">count</span>++          <span class="comment">// ❌ 能改，但破坏了可追踪性</span></span><br><span class="line">store.<span class="title function_">commit</span>(<span class="string">&#x27;addCount&#x27;</span>, <span class="number">1</span>)  <span class="comment">// ✅ 唯一入口</span></span><br></pre></td></tr></table></figure>
+
+<p>开了严格模式（<code>strict: true</code>）之后，直接改 state 会<strong>直接报错</strong>：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_">createStore</span>(&#123;</span><br><span class="line">  <span class="attr">strict</span>: <span class="literal">true</span>,</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>这就是 Vuex 的<strong>单向数据流</strong>：视图不能直接改数据，必须走 action &#x2F; mutation。好处是任何一次数据变化都能在 devtools 里看到”是谁、什么时候、改了什么”。</p>
+<p><strong>规矩二：mutations 必须同步。</strong></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">mutations</span>: &#123;</span><br><span class="line">  <span class="comment">// ❌ 异步代码放进来，devtools 追踪不到变化顺序</span></span><br><span class="line">  <span class="keyword">async</span> <span class="title function_">badMutation</span> (state) &#123;</span><br><span class="line">    <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="title function_">fetch</span>(<span class="string">&#x27;/api&#x27;</span>)</span><br><span class="line">    state.<span class="property">data</span> = res</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>devtools 记录的是”某一时刻的快照”。异步代码里 <code>await</code> 之后才改 state，快照和实际操作对不上，调试就废了。<strong>异步逻辑一律放 actions。</strong></p>
+<p><strong>规矩三：模块化拆分。</strong></p>
+<p>一个 <code>index.js</code> 写到八百行就该拆了：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/store/modules/cart.js</span></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> &#123;</span><br><span class="line">  <span class="attr">namespaced</span>: <span class="literal">true</span>,        <span class="comment">// 开启命名空间</span></span><br><span class="line">  <span class="attr">state</span>: <span class="function">() =&gt;</span> (&#123;</span><br><span class="line">    <span class="attr">list</span>: []</span><br><span class="line">  &#125;),</span><br><span class="line">  <span class="attr">mutations</span>: &#123;</span><br><span class="line">    <span class="title function_">setList</span> (state, list) &#123;</span><br><span class="line">      state.<span class="property">list</span> = list</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">actions</span>: &#123;</span><br><span class="line">    <span class="keyword">async</span> <span class="title function_">getList</span> (&#123; commit &#125;) &#123;</span><br><span class="line">      <span class="keyword">const</span> res = <span class="keyword">await</span> request.<span class="title function_">get</span>(<span class="string">&#x27;/cart&#x27;</span>)</span><br><span class="line">      <span class="title function_">commit</span>(<span class="string">&#x27;setList&#x27;</span>, res.<span class="property">data</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">getters</span>: &#123;</span><br><span class="line">    <span class="attr">total</span>: <span class="function">(<span class="params">state</span>) =&gt;</span> state.<span class="property">list</span>.<span class="title function_">reduce</span>(<span class="function">(<span class="params">s, i</span>) =&gt;</span> s + i.<span class="property">price</span>, <span class="number">0</span>)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/store/index.js</span></span><br><span class="line"><span class="keyword">import</span> cart <span class="keyword">from</span> <span class="string">&#x27;./modules/cart&#x27;</span></span><br><span class="line"><span class="keyword">import</span> user <span class="keyword">from</span> <span class="string">&#x27;./modules/user&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="title function_">createStore</span>(&#123;</span><br><span class="line">  <span class="attr">modules</span>: &#123; cart, user &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>开了 <code>namespaced: true</code> 之后，访问要带模块名：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">store.<span class="property">state</span>.<span class="property">cart</span>.<span class="property">list</span>              <span class="comment">// state</span></span><br><span class="line">store.<span class="property">getters</span>[<span class="string">&#x27;cart/total&#x27;</span>]        <span class="comment">// getters</span></span><br><span class="line">store.<span class="title function_">commit</span>(<span class="string">&#x27;cart/setList&#x27;</span>, [])   <span class="comment">// mutations</span></span><br><span class="line">store.<span class="title function_">dispatch</span>(<span class="string">&#x27;cart/getList&#x27;</span>)     <span class="comment">// actions</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>不开 <code>namespaced</code>，所有模块的 mutations 挤在全局命名空间，两个模块都有 <code>setList</code> 就冲突了。<strong>模块化必开命名空间。</strong></p>
+</blockquote>
+<h3 id="2-5-辅助函数：把-store-映射进组件"><a href="#2-5-辅助函数：把-store-映射进组件" class="headerlink" title="2.5 辅助函数：把 store 映射进组件"></a>2.5 辅助函数：把 store 映射进组件</h3><p>每次写 <code>this.$store.state.count</code> 太啰嗦。辅助函数把它映射成组件自己的属性：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; mapState, mapGetters, mapMutations, mapActions &#125; <span class="keyword">from</span> <span class="string">&#x27;vuex&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> &#123;</span><br><span class="line">  <span class="attr">computed</span>: &#123;</span><br><span class="line">    <span class="comment">// 数组写法：同名映射</span></span><br><span class="line">    ...<span class="title function_">mapState</span>([<span class="string">&#x27;count&#x27;</span>, <span class="string">&#x27;cartList&#x27;</span>]),</span><br><span class="line">    ...<span class="title function_">mapGetters</span>([<span class="string">&#x27;totalPrice&#x27;</span>]),</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 对象写法：改名</span></span><br><span class="line">    ...<span class="title function_">mapState</span>(&#123;</span><br><span class="line">      <span class="attr">myCount</span>: <span class="string">&#x27;count&#x27;</span></span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  <span class="attr">methods</span>: &#123;</span><br><span class="line">    ...<span class="title function_">mapMutations</span>([<span class="string">&#x27;addCount&#x27;</span>]),</span><br><span class="line">    ...<span class="title function_">mapActions</span>([<span class="string">&#x27;fetchCart&#x27;</span>])</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>四个辅助函数对应四件套：<code>mapState</code>、<code>mapGetters</code>、<code>mapMutations</code>、<code>mapActions</code>。展开运算符一撒，模板里就能直接用 <code>count</code>、<code>addCount(5)</code>。</p>
+<blockquote>
+<p>组合式 API 里辅助函数不太顺手（它们是为选项式的 <code>this</code> 设计的）。要写组合式，直接 <code>store.state.xxx</code> 更清楚。</p>
+</blockquote>
+<hr>
+<h2 id="三、Pinia：现在的最优解"><a href="#三、Pinia：现在的最优解" class="headerlink" title="三、Pinia：现在的最优解"></a>三、Pinia：现在的最优解</h2><h3 id="3-1-为什么官方推荐它"><a href="#3-1-为什么官方推荐它" class="headerlink" title="3.1 为什么官方推荐它"></a>3.1 为什么官方推荐它</h3><p>Pinia 是 Vue 官方现在推荐的状态管理库，也是 Vue3 项目的默认选择。相比 Vuex，它砍掉了一堆概念：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Vuex</th>
+<th>Pinia</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>mutations</td>
+<td>必须有，改数据唯一入口</td>
+<td><strong>没有</strong>，直接改</td>
+</tr>
+<tr>
+<td>模块嵌套</td>
+<td><code>modules</code> 套 <code>modules</code></td>
+<td>一个文件一个 store，扁平</td>
+</tr>
+<tr>
+<td>命名空间</td>
+<td>要配 <code>namespaced: true</code></td>
+<td>天生隔离，靠 store id</td>
+</tr>
+<tr>
+<td>TS 支持</td>
+<td>一般</td>
+<td>完整推导</td>
+</tr>
+<tr>
+<td>体积</td>
+<td>大</td>
+<td>小</td>
+</tr>
+<tr>
+<td>devtools</td>
+<td>支持</td>
+<td>支持，更好用</td>
+</tr>
+</tbody></table>
+<p><strong>最直观的变化：改数据不用再 <code>commit</code> 了。</strong> Vuex 里”读走 state、改写走 mutation”的双轨制，在 Pinia 里变成”读直接读、改写直接写”。</p>
+<p>那 Vuex 的单向数据流优势呢？Pinia 用 <code>actions</code> 保留了它——<strong>约定所有改动都写在 action 里</strong>，靠规范而不是靠机制。</p>
+<h3 id="3-2-装和挂"><a href="#3-2-装和挂" class="headerlink" title="3.2 装和挂"></a>3.2 装和挂</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install pinia</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// main.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; createApp &#125; <span class="keyword">from</span> <span class="string">&#x27;vue&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; createPinia &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"><span class="keyword">import</span> <span class="title class_">App</span> <span class="keyword">from</span> <span class="string">&#x27;./App.vue&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> app = <span class="title function_">createApp</span>(<span class="title class_">App</span>)</span><br><span class="line">app.<span class="title function_">use</span>(<span class="title function_">createPinia</span>())</span><br><span class="line">app.<span class="title function_">mount</span>(<span class="string">&#x27;#app&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>create-vue 建项目时勾了 Pinia，这两步脚手架已经做好了。</p>
+<h3 id="3-3-定义一个-store"><a href="#3-3-定义一个-store" class="headerlink" title="3.3 定义一个 store"></a>3.3 定义一个 store</h3><p>Pinia 有两种写法。先看<strong>选项式</strong>（和 Vuex 长得像）：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/stores/cart.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; defineStore &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> useCartStore = <span class="title function_">defineStore</span>(<span class="string">&#x27;cart&#x27;</span>, &#123;</span><br><span class="line">  <span class="comment">// state：必须是函数返回对象，理由和组件的 data 一样</span></span><br><span class="line">  <span class="attr">state</span>: <span class="function">() =&gt;</span> (&#123;</span><br><span class="line">    <span class="attr">list</span>: [],</span><br><span class="line">    <span class="attr">loading</span>: <span class="literal">false</span></span><br><span class="line">  &#125;),</span><br><span class="line"></span><br><span class="line">  <span class="comment">// getters：派生数据，第一个参数是 state</span></span><br><span class="line">  <span class="attr">getters</span>: &#123;</span><br><span class="line">    <span class="attr">count</span>: <span class="function">(<span class="params">state</span>) =&gt;</span> state.<span class="property">list</span>.<span class="property">length</span>,</span><br><span class="line">    <span class="attr">total</span>: <span class="function">(<span class="params">state</span>) =&gt;</span> state.<span class="property">list</span>.<span class="title function_">reduce</span>(<span class="function">(<span class="params">s, i</span>) =&gt;</span> s + i.<span class="property">price</span> * i.<span class="property">num</span>, <span class="number">0</span>),</span><br><span class="line">    <span class="comment">// 用其他 getter：不能用箭头函数，this 才是 store</span></span><br><span class="line">    <span class="title function_">totalText</span> () &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="string">&#x27;￥&#x27;</span> + <span class="variable language_">this</span>.<span class="property">total</span>.<span class="title function_">toFixed</span>(<span class="number">2</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  <span class="comment">// actions：改数据 + 业务逻辑，可以是异步</span></span><br><span class="line">  <span class="attr">actions</span>: &#123;</span><br><span class="line">    <span class="keyword">async</span> <span class="title function_">getList</span> () &#123;</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">loading</span> = <span class="literal">true</span></span><br><span class="line">      <span class="keyword">const</span> res = <span class="keyword">await</span> request.<span class="title function_">get</span>(<span class="string">&#x27;/cart&#x27;</span>)</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">list</span> = res.<span class="property">data</span>          <span class="comment">// 直接改，不用 commit</span></span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">loading</span> = <span class="literal">false</span></span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="title function_">add</span> (goods) &#123;</span><br><span class="line">      <span class="keyword">const</span> item = <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">find</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> === goods.<span class="property">id</span>)</span><br><span class="line">      <span class="keyword">if</span> (item) &#123;</span><br><span class="line">        item.<span class="property">num</span>++</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">push</span>(&#123; ...goods, <span class="attr">num</span>: <span class="number">1</span> &#125;)</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="title function_">del</span> (id) &#123;</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">list</span> = <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">filter</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> !== id)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>再看<strong>组合式</strong>写法（和 <code>&lt;script setup&gt;</code> 一个风格）：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/stores/cart.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; ref, computed &#125; <span class="keyword">from</span> <span class="string">&#x27;vue&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; defineStore &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> useCartStore = <span class="title function_">defineStore</span>(<span class="string">&#x27;cart&#x27;</span>, <span class="function">() =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// state：就是 ref</span></span><br><span class="line">  <span class="keyword">const</span> list = <span class="title function_">ref</span>([])</span><br><span class="line">  <span class="keyword">const</span> loading = <span class="title function_">ref</span>(<span class="literal">false</span>)</span><br><span class="line"></span><br><span class="line">  <span class="comment">// getters：就是 computed</span></span><br><span class="line">  <span class="keyword">const</span> count = <span class="title function_">computed</span>(<span class="function">() =&gt;</span> list.<span class="property">value</span>.<span class="property">length</span>)</span><br><span class="line">  <span class="keyword">const</span> total = <span class="title function_">computed</span>(<span class="function">() =&gt;</span></span><br><span class="line">    list.<span class="property">value</span>.<span class="title function_">reduce</span>(<span class="function">(<span class="params">s, i</span>) =&gt;</span> s + i.<span class="property">price</span> * i.<span class="property">num</span>, <span class="number">0</span>)</span><br><span class="line">  )</span><br><span class="line"></span><br><span class="line">  <span class="comment">// actions：就是普通函数</span></span><br><span class="line">  <span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">getList</span> (<span class="params"></span>) &#123;</span><br><span class="line">    loading.<span class="property">value</span> = <span class="literal">true</span></span><br><span class="line">    <span class="keyword">const</span> res = <span class="keyword">await</span> request.<span class="title function_">get</span>(<span class="string">&#x27;/cart&#x27;</span>)</span><br><span class="line">    list.<span class="property">value</span> = res.<span class="property">data</span></span><br><span class="line">    loading.<span class="property">value</span> = <span class="literal">false</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">function</span> <span class="title function_">add</span> (<span class="params">goods</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> item = list.<span class="property">value</span>.<span class="title function_">find</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> === goods.<span class="property">id</span>)</span><br><span class="line">    item ? item.<span class="property">num</span>++ : list.<span class="property">value</span>.<span class="title function_">push</span>(&#123; ...goods, <span class="attr">num</span>: <span class="number">1</span> &#125;)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 必须 return 出去</span></span><br><span class="line">  <span class="keyword">return</span> &#123; list, loading, count, total, getList, add &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th>选项式 store</th>
+<th>组合式 store</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>长相</td>
+<td>像 Vuex</td>
+<td>像 <code>&lt;script setup&gt;</code></td>
+</tr>
+<tr>
+<td>state</td>
+<td><code>state: () =&gt; ({})</code></td>
+<td><code>ref()</code></td>
+</tr>
+<tr>
+<td>getters</td>
+<td><code>getters: {}</code></td>
+<td><code>computed()</code></td>
+</tr>
+<tr>
+<td>actions</td>
+<td><code>actions: {}</code></td>
+<td>普通函数</td>
+</tr>
+<tr>
+<td>需要 return</td>
+<td>不需要</td>
+<td><strong>需要</strong></td>
+</tr>
+</tbody></table>
+<p><strong>两种都对，选一种用到底。</strong> 组合式写法更贴近 Vue3 的日常写法，逻辑复用也更自由；选项式写法和 Vuex 长得像，迁移旧项目时更省事。</p>
+<h3 id="3-4-组件里怎么用"><a href="#3-4-组件里怎么用" class="headerlink" title="3.4 组件里怎么用"></a>3.4 组件里怎么用</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&lt;script setup&gt;</span><br><span class="line">import &#123; useCartStore &#125; from &#x27;@/stores/cart&#x27;</span><br><span class="line"></span><br><span class="line">const cartStore = useCartStore()</span><br><span class="line"></span><br><span class="line">// 读：直接点</span><br><span class="line">console.log(cartStore.list)</span><br><span class="line">console.log(cartStore.total)</span><br><span class="line"></span><br><span class="line">// 改：调 action</span><br><span class="line">cartStore.add(goods)</span><br><span class="line">cartStore.getList()</span><br><span class="line">&lt;/script&gt;</span><br><span class="line"></span><br><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;p&gt;共 &#123;&#123; cartStore.count &#125;&#125; 件，合计 &#123;&#123; cartStore.total &#125;&#125;&lt;/p&gt;</span><br><span class="line">&lt;/template&gt;</span><br></pre></td></tr></table></figure>
+
+<p><code>useCartStore()</code> 每次调用返回的是<strong>同一个实例</strong>（单例），不用担心重复创建。</p>
+<h3 id="3-5-⚠️-解构-store-会丢响应性"><a href="#3-5-⚠️-解构-store-会丢响应性" class="headerlink" title="3.5 ⚠️ 解构 store 会丢响应性"></a>3.5 ⚠️ 解构 store 会丢响应性</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> cartStore = <span class="title function_">useCartStore</span>()</span><br><span class="line"></span><br><span class="line"><span class="comment">// ❌ 解构出来是死值，store 变了不跟着变</span></span><br><span class="line"><span class="keyword">const</span> &#123; list, count &#125; = cartStore</span><br></pre></td></tr></table></figure>
+
+<p>又是这个坑。store 是个响应式对象，解构等于复制值。</p>
+<p><strong>正确做法：<code>storeToRefs</code>。</strong></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> &#123; storeToRefs &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> cartStore = <span class="title function_">useCartStore</span>()</span><br><span class="line"></span><br><span class="line"><span class="comment">// 只有 state 和 getters 需要转</span></span><br><span class="line"><span class="keyword">const</span> &#123; list, count &#125; = <span class="title function_">storeToRefs</span>(cartStore)</span><br><span class="line"></span><br><span class="line"><span class="comment">// actions 直接从 store 上取，不要转</span></span><br><span class="line">cartStore.<span class="title function_">add</span>(goods)</span><br></pre></td></tr></table></figure>
+
+<p>为什么要分开？因为 <code>storeToRefs</code> 只处理响应式数据，<strong>如果把 action 也转成 ref，调用时得写 <code>add.value()</code></strong>，很别扭。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ❌ 错误：action 也被转成了 ref</span></span><br><span class="line"><span class="keyword">const</span> &#123; add &#125; = <span class="title function_">storeToRefs</span>(cartStore)</span><br><span class="line">add.<span class="title function_">value</span>(goods)</span><br></pre></td></tr></table></figure>
+
+<p>记法：<strong><code>storeToRefs</code> 只解构”数据”，”方法”直接从 store 拿。</strong></p>
+<h3 id="3-6-仓库统一管理"><a href="#3-6-仓库统一管理" class="headerlink" title="3.6 仓库统一管理"></a>3.6 仓库统一管理</h3><p>仓库一多，每个组件都要写一长串 import 路径。大事件项目的做法值得抄：<strong>把仓库收进一个出口文件</strong>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">src/stores/</span><br><span class="line"> ├── index.js        统一出口</span><br><span class="line"> └── modules/</span><br><span class="line">      ├── user.js</span><br><span class="line">      ├── article.js</span><br><span class="line">      └── cart.js</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/stores/index.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; createPinia &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> pinia = <span class="title function_">createPinia</span>()</span><br><span class="line"></span><br><span class="line"><span class="comment">// 统一导出所有仓库</span></span><br><span class="line"><span class="keyword">export</span> * <span class="keyword">from</span> <span class="string">&#x27;./modules/user&#x27;</span></span><br><span class="line"><span class="keyword">export</span> * <span class="keyword">from</span> <span class="string">&#x27;./modules/article&#x27;</span></span><br><span class="line"><span class="keyword">export</span> * <span class="keyword">from</span> <span class="string">&#x27;./modules/cart&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> pinia</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// main.js</span></span><br><span class="line"><span class="keyword">import</span> pinia <span class="keyword">from</span> <span class="string">&#x27;@/stores&#x27;</span></span><br><span class="line">app.<span class="title function_">use</span>(pinia)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 组件里：路径统一，不用记每个仓库在哪个文件</span></span><br><span class="line"><span class="keyword">import</span> &#123; useUserStore, useCartStore &#125; <span class="keyword">from</span> <span class="string">&#x27;@/stores&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>好处是<strong>改动隔离</strong>：仓库从 <code>modules/cart.js</code> 挪到 <code>modules/shop/cart.js</code>，只改 <code>index.js</code> 一行，全项目的 import 都不用动。</p>
+<h3 id="3-7-调试"><a href="#3-7-调试" class="headerlink" title="3.7 调试"></a>3.7 调试</h3><p>Vue 官方 devtools 直接支持 Pinia。打开浏览器开发者工具的 Vue 面板，能看到：</p>
+<ul>
+<li>所有 store 的列表</li>
+<li>每个 store 的 state &#x2F; getters 实时值</li>
+<li><strong>时间旅行</strong>：点历史记录，能回到任意一次 state 变化之前</li>
+</ul>
+<p>比 Vuex 时代好用，因为不用在 mutation 里写日志了——<strong>每次 state 变化都被自动记录</strong>。</p>
+<hr>
+<h2 id="四、持久化：刷新页面别丢数据"><a href="#四、持久化：刷新页面别丢数据" class="headerlink" title="四、持久化：刷新页面别丢数据"></a>四、持久化：刷新页面别丢数据</h2><p>购物车、登录 token 这些东西，刷新就没了很致命。</p>
+<h3 id="4-1-官方插件"><a href="#4-1-官方插件" class="headerlink" title="4.1 官方插件"></a>4.1 官方插件</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install pinia-plugin-persistedstate</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// main.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; createPinia &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"><span class="keyword">import</span> persist <span class="keyword">from</span> <span class="string">&#x27;pinia-plugin-persistedstate&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> pinia = <span class="title function_">createPinia</span>()</span><br><span class="line">pinia.<span class="title function_">use</span>(persist)</span><br><span class="line">app.<span class="title function_">use</span>(pinia)</span><br></pre></td></tr></table></figure>
+
+<p>store 里加一个配置项：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> useCartStore = <span class="title function_">defineStore</span>(<span class="string">&#x27;cart&#x27;</span>, &#123;</span><br><span class="line">  <span class="attr">state</span>: <span class="function">() =&gt;</span> (&#123; <span class="attr">list</span>: [] &#125;),</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">&#125;, &#123;</span><br><span class="line">  <span class="attr">persist</span>: <span class="literal">true</span>        <span class="comment">// 自动存 localStorage</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>完事。刷新页面，<code>list</code> 还在。</p>
+<h3 id="4-2-精细配置"><a href="#4-2-精细配置" class="headerlink" title="4.2 精细配置"></a>4.2 精细配置</h3><p>只想存一部分字段，或者换 sessionStorage：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">persist</span>: &#123;</span><br><span class="line">  <span class="attr">key</span>: <span class="string">&#x27;my-cart&#x27;</span>,              <span class="comment">// 存储的键名，默认是 store id</span></span><br><span class="line">  <span class="attr">storage</span>: <span class="variable language_">sessionStorage</span>,     <span class="comment">// 默认 localStorage</span></span><br><span class="line">  <span class="attr">pick</span>: [<span class="string">&#x27;list&#x27;</span>],              <span class="comment">// 只存 list，不存 loading</span></span><br><span class="line">  <span class="comment">// 或者用 omit 排除</span></span><br><span class="line">  <span class="comment">// omit: [&#x27;loading&#x27;]</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><code>loading</code> 这种临时状态<strong>不该持久化</strong>。刷新后页面还没发请求，<code>loading</code> 却是 <code>true</code>，就会出现”转圈一直不停”的怪现象。用 <code>pick</code> 只存该存的。</p>
+</blockquote>
+<h3 id="4-3-组合式-store-的持久化"><a href="#4-3-组合式-store-的持久化" class="headerlink" title="4.3 组合式 store 的持久化"></a>4.3 组合式 store 的持久化</h3><p>组合式写法里，第三个参数同样管用：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> useCartStore = <span class="title function_">defineStore</span>(<span class="string">&#x27;cart&#x27;</span>, <span class="function">() =&gt;</span> &#123;</span><br><span class="line">  <span class="keyword">const</span> list = <span class="title function_">ref</span>([])</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">  <span class="keyword">return</span> &#123; list, count, total, getList, add &#125;</span><br><span class="line">&#125;, &#123;</span><br><span class="line">  <span class="attr">persist</span>: <span class="literal">true</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="五、迁移对照表：Vuex-怎么改成-Pinia"><a href="#五、迁移对照表：Vuex-怎么改成-Pinia" class="headerlink" title="五、迁移对照表：Vuex 怎么改成 Pinia"></a>五、迁移对照表：Vuex 怎么改成 Pinia</h2><p>接手一个 Vuex 项目，要迁到 Pinia，按这张表逐行改：</p>
+<table>
+<thead>
+<tr>
+<th>Vuex</th>
+<th>Pinia</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>createStore({ state })</code></td>
+<td><code>defineStore(&#39;id&#39;, { state })</code></td>
+<td>state 都要写成函数</td>
+</tr>
+<tr>
+<td><code>mutations: { add(state, n) }</code></td>
+<td>删掉，逻辑挪进 <code>actions</code></td>
+<td>Pinia 没有 mutations</td>
+</tr>
+<tr>
+<td><code>commit(&#39;add&#39;, 5)</code></td>
+<td><code>store.add(5)</code></td>
+<td>直接调方法</td>
+</tr>
+<tr>
+<td><code>actions: { async get({ commit }) }</code></td>
+<td><code>actions: { async get() }</code></td>
+<td>用 <code>this</code> 改 state</td>
+</tr>
+<tr>
+<td><code>getters: { total: (s) =&gt; ... }</code></td>
+<td>一样</td>
+<td>写法基本不变</td>
+</tr>
+<tr>
+<td><code>modules: { cart }</code></td>
+<td>一个文件一个 store</td>
+<td>不用嵌套</td>
+</tr>
+<tr>
+<td><code>namespaced: true</code></td>
+<td>不需要</td>
+<td>靠 store id 天然隔离</td>
+</tr>
+<tr>
+<td><code>mapState([&#39;count&#39;])</code></td>
+<td><code>storeToRefs(store)</code></td>
+<td>解构要转 ref</td>
+</tr>
+<tr>
+<td><code>this.$store.state.x</code></td>
+<td><code>useXxxStore().x</code></td>
+<td>组合式里直接点</td>
+</tr>
+<tr>
+<td>无内置持久化</td>
+<td><code>pinia-plugin-persistedstate</code></td>
+<td>一个配置项</td>
+</tr>
+</tbody></table>
+<p>改一个典型模块，前后对比：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Vuex 版</span></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> &#123;</span><br><span class="line">  <span class="attr">namespaced</span>: <span class="literal">true</span>,</span><br><span class="line">  <span class="attr">state</span>: <span class="function">() =&gt;</span> (&#123; <span class="attr">list</span>: [] &#125;),</span><br><span class="line">  <span class="attr">mutations</span>: &#123;</span><br><span class="line">    <span class="title function_">setList</span> (state, list) &#123; state.<span class="property">list</span> = list &#125;,</span><br><span class="line">    <span class="title function_">addNum</span> (state, id) &#123;</span><br><span class="line">      <span class="keyword">const</span> item = state.<span class="property">list</span>.<span class="title function_">find</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> === id)</span><br><span class="line">      item.<span class="property">num</span>++</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">actions</span>: &#123;</span><br><span class="line">    <span class="keyword">async</span> <span class="title function_">getList</span> (&#123; commit &#125;) &#123;</span><br><span class="line">      <span class="keyword">const</span> res = <span class="keyword">await</span> request.<span class="title function_">get</span>(<span class="string">&#x27;/cart&#x27;</span>)</span><br><span class="line">      <span class="title function_">commit</span>(<span class="string">&#x27;setList&#x27;</span>, res.<span class="property">data</span>)</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="title function_">addNum</span> (&#123; commit &#125;, id) &#123;</span><br><span class="line">      <span class="title function_">commit</span>(<span class="string">&#x27;addNum&#x27;</span>, id)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">getters</span>: &#123;</span><br><span class="line">    <span class="attr">total</span>: <span class="function">(<span class="params">state</span>) =&gt;</span> state.<span class="property">list</span>.<span class="title function_">reduce</span>(<span class="function">(<span class="params">s, i</span>) =&gt;</span> s + i.<span class="property">price</span> * i.<span class="property">num</span>, <span class="number">0</span>)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Pinia 版</span></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> useCartStore = <span class="title function_">defineStore</span>(<span class="string">&#x27;cart&#x27;</span>, &#123;</span><br><span class="line">  <span class="attr">state</span>: <span class="function">() =&gt;</span> (&#123; <span class="attr">list</span>: [] &#125;),</span><br><span class="line">  <span class="attr">getters</span>: &#123;</span><br><span class="line">    <span class="attr">total</span>: <span class="function">(<span class="params">state</span>) =&gt;</span> state.<span class="property">list</span>.<span class="title function_">reduce</span>(<span class="function">(<span class="params">s, i</span>) =&gt;</span> s + i.<span class="property">price</span> * i.<span class="property">num</span>, <span class="number">0</span>)</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">actions</span>: &#123;</span><br><span class="line">    <span class="keyword">async</span> <span class="title function_">getList</span> () &#123;</span><br><span class="line">      <span class="keyword">const</span> res = <span class="keyword">await</span> request.<span class="title function_">get</span>(<span class="string">&#x27;/cart&#x27;</span>)</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">list</span> = res.<span class="property">data</span></span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="title function_">addNum</span> (id) &#123;</span><br><span class="line">      <span class="keyword">const</span> item = <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">find</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> === id)</span><br><span class="line">      item.<span class="property">num</span>++</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;, &#123;</span><br><span class="line">  <span class="attr">persist</span>: <span class="literal">true</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>行数少了三分之一，<code>commit</code> 那一层壳完全消失。</p>
+<hr>
+<h2 id="六、实战：购物车"><a href="#六、实战：购物车" class="headerlink" title="六、实战：购物车"></a>六、实战：购物车</h2><p>把上面的东西串一遍。需求：</p>
+<ul>
+<li>商品列表点”加入购物车”，购物车角标 +1</li>
+<li>购物车页面：列表、改数量、删除、全选、算总价</li>
+<li>刷新页面数据还在</li>
+</ul>
+<h3 id="6-1-store"><a href="#6-1-store" class="headerlink" title="6.1 store"></a>6.1 store</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/stores/cart.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; defineStore &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"><span class="keyword">import</span> request <span class="keyword">from</span> <span class="string">&#x27;@/utils/request&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> useCartStore = <span class="title function_">defineStore</span>(<span class="string">&#x27;cart&#x27;</span>, &#123;</span><br><span class="line">  <span class="attr">state</span>: <span class="function">() =&gt;</span> (&#123;</span><br><span class="line">    <span class="attr">list</span>: [],</span><br><span class="line">    <span class="attr">loading</span>: <span class="literal">false</span></span><br><span class="line">  &#125;),</span><br><span class="line"></span><br><span class="line">  <span class="attr">getters</span>: &#123;</span><br><span class="line">    <span class="comment">// 商品总件数（角标用）</span></span><br><span class="line">    <span class="attr">count</span>: <span class="function">(<span class="params">state</span>) =&gt;</span> state.<span class="property">list</span>.<span class="title function_">reduce</span>(<span class="function">(<span class="params">s, i</span>) =&gt;</span> s + i.<span class="property">num</span>, <span class="number">0</span>),</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 是否全选</span></span><br><span class="line">    <span class="attr">isAllChecked</span>: <span class="function">(<span class="params">state</span>) =&gt;</span></span><br><span class="line">      state.<span class="property">list</span>.<span class="property">length</span> &gt; <span class="number">0</span> &amp;&amp; state.<span class="property">list</span>.<span class="title function_">every</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">checked</span>),</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 选中商品总价</span></span><br><span class="line">    <span class="attr">total</span>: <span class="function">(<span class="params">state</span>) =&gt;</span></span><br><span class="line">      state.<span class="property">list</span></span><br><span class="line">        .<span class="title function_">filter</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">checked</span>)</span><br><span class="line">        .<span class="title function_">reduce</span>(<span class="function">(<span class="params">s, i</span>) =&gt;</span> s + i.<span class="property">price</span> * i.<span class="property">num</span>, <span class="number">0</span>),</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 格式化后的总价</span></span><br><span class="line">    <span class="title function_">totalText</span> () &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="string">&#x27;￥&#x27;</span> + <span class="variable language_">this</span>.<span class="property">total</span>.<span class="title function_">toFixed</span>(<span class="number">2</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  <span class="attr">actions</span>: &#123;</span><br><span class="line">    <span class="keyword">async</span> <span class="title function_">getList</span> () &#123;</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">loading</span> = <span class="literal">true</span></span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">const</span> res = <span class="keyword">await</span> request.<span class="title function_">get</span>(<span class="string">&#x27;/cart&#x27;</span>)</span><br><span class="line">        <span class="variable language_">this</span>.<span class="property">list</span> = res.<span class="property">data</span>.<span class="title function_">map</span>(<span class="function"><span class="params">i</span> =&gt;</span> (&#123; ...i, <span class="attr">checked</span>: <span class="literal">true</span> &#125;))</span><br><span class="line">      &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="variable language_">this</span>.<span class="property">loading</span> = <span class="literal">false</span>          <span class="comment">// 不管成功失败都要关</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    <span class="title function_">add</span> (goods) &#123;</span><br><span class="line">      <span class="keyword">const</span> item = <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">find</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> === goods.<span class="property">id</span>)</span><br><span class="line">      <span class="keyword">if</span> (item) &#123;</span><br><span class="line">        item.<span class="property">num</span>++</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">push</span>(&#123; ...goods, <span class="attr">num</span>: <span class="number">1</span>, <span class="attr">checked</span>: <span class="literal">true</span> &#125;)</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    <span class="title function_">changeNum</span> (id, num) &#123;</span><br><span class="line">      <span class="keyword">const</span> item = <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">find</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> === id)</span><br><span class="line">      <span class="keyword">if</span> (!item) <span class="keyword">return</span></span><br><span class="line">      <span class="keyword">if</span> (num &lt; <span class="number">1</span>) <span class="keyword">return</span>             <span class="comment">// 最少 1 件</span></span><br><span class="line">      item.<span class="property">num</span> = num</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    <span class="title function_">del</span> (id) &#123;</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">list</span> = <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">filter</span>(<span class="function"><span class="params">i</span> =&gt;</span> i.<span class="property">id</span> !== id)</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    <span class="title function_">toggleAll</span> (checked) &#123;</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">list</span>.<span class="title function_">forEach</span>(<span class="function"><span class="params">i</span> =&gt;</span> &#123; i.<span class="property">checked</span> = checked &#125;)</span><br><span class="line">    &#125;,</span><br><span class="line"></span><br><span class="line">    <span class="title function_">clear</span> () &#123;</span><br><span class="line">      <span class="variable language_">this</span>.<span class="property">list</span> = []</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;, &#123;</span><br><span class="line">  <span class="comment">// 只持久化列表，loading 不存</span></span><br><span class="line">  <span class="attr">persist</span>: &#123;</span><br><span class="line">    <span class="attr">key</span>: <span class="string">&#x27;cart&#x27;</span>,</span><br><span class="line">    <span class="attr">pick</span>: [<span class="string">&#x27;list&#x27;</span>]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>三个设计点：</p>
+<p><strong><code>getters</code> 里算总价，不用 <code>watch</code>。</strong> 总价是纯派生数据，<code>computed</code> 缓存更划算。</p>
+<p><strong><code>checked</code> 放在每一项上，不单独存一个数组。</strong> 否则删除商品时要同步维护两个结构，容易不一致。</p>
+<p><strong><code>getList</code> 用 <code>try/finally</code>。</strong> 请求失败时 <code>loading</code> 也要关掉，否则页面永远转圈。</p>
+<h3 id="6-2-商品列表页"><a href="#6-2-商品列表页" class="headerlink" title="6.2 商品列表页"></a>6.2 商品列表页</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- GoodsListView.vue --&gt;</span><br><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;div class=&quot;goods&quot;&gt;</span><br><span class="line">    &lt;div v-for=&quot;item in goodsList&quot; :key=&quot;item.id&quot; class=&quot;card&quot;&gt;</span><br><span class="line">      &lt;h3&gt;&#123;&#123; item.name &#125;&#125;&lt;/h3&gt;</span><br><span class="line">      &lt;p&gt;￥&#123;&#123; item.price &#125;&#125;&lt;/p&gt;</span><br><span class="line">      &lt;button @click=&quot;cartStore.add(item)&quot;&gt;加入购物车&lt;/button&gt;</span><br><span class="line">    &lt;/div&gt;</span><br><span class="line">  &lt;/div&gt;</span><br><span class="line">&lt;/template&gt;</span><br><span class="line"></span><br><span class="line">&lt;script setup&gt;</span><br><span class="line">import &#123; ref, onMounted &#125; from &#x27;vue&#x27;</span><br><span class="line">import &#123; useCartStore &#125; from &#x27;@/stores&#x27;</span><br><span class="line"></span><br><span class="line">const cartStore = useCartStore()</span><br><span class="line">const goodsList = ref([])</span><br><span class="line"></span><br><span class="line">onMounted(async () =&gt; &#123;</span><br><span class="line">  const res = await fetch(&#x27;/api/goods&#x27;)</span><br><span class="line">  goodsList.value = await res.json()</span><br><span class="line">&#125;)</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-角标"><a href="#6-3-角标" class="headerlink" title="6.3 角标"></a>6.3 角标</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- App.vue --&gt;</span><br><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;nav class=&quot;tabbar&quot;&gt;</span><br><span class="line">    &lt;router-link to=&quot;/home&quot;&gt;首页&lt;/router-link&gt;</span><br><span class="line">    &lt;router-link to=&quot;/cart&quot;&gt;</span><br><span class="line">      购物车</span><br><span class="line">      &lt;span v-if=&quot;count&quot; class=&quot;badge&quot;&gt;&#123;&#123; count &#125;&#125;&lt;/span&gt;</span><br><span class="line">    &lt;/router-link&gt;</span><br><span class="line">  &lt;/nav&gt;</span><br><span class="line"></span><br><span class="line">  &lt;router-view&gt;&lt;/router-view&gt;</span><br><span class="line">&lt;/template&gt;</span><br><span class="line"></span><br><span class="line">&lt;script setup&gt;</span><br><span class="line">import &#123; storeToRefs &#125; from &#x27;pinia&#x27;</span><br><span class="line">import &#123; useCartStore &#125; from &#x27;@/stores&#x27;</span><br><span class="line"></span><br><span class="line">const cartStore = useCartStore()</span><br><span class="line">// 解构 getter 必须走 storeToRefs</span><br><span class="line">const &#123; count &#125; = storeToRefs(cartStore)</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-4-购物车页面"><a href="#6-4-购物车页面" class="headerlink" title="6.4 购物车页面"></a>6.4 购物车页面</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- CartView.vue --&gt;</span><br><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;div class=&quot;cart&quot;&gt;</span><br><span class="line">    &lt;div class=&quot;header&quot;&gt;</span><br><span class="line">      &lt;label&gt;</span><br><span class="line">        &lt;input</span><br><span class="line">          type=&quot;checkbox&quot;</span><br><span class="line">          :checked=&quot;isAllChecked&quot;</span><br><span class="line">          @change=&quot;cartStore.toggleAll($event.target.checked)&quot;</span><br><span class="line">        &gt;</span><br><span class="line">        全选</span><br><span class="line">      &lt;/label&gt;</span><br><span class="line">    &lt;/div&gt;</span><br><span class="line"></span><br><span class="line">    &lt;div v-for=&quot;item in list&quot; :key=&quot;item.id&quot; class=&quot;item&quot;&gt;</span><br><span class="line">      &lt;input type=&quot;checkbox&quot; v-model=&quot;item.checked&quot;&gt;</span><br><span class="line">      &lt;img :src=&quot;item.pic&quot; alt=&quot;&quot;&gt;</span><br><span class="line">      &lt;div class=&quot;info&quot;&gt;</span><br><span class="line">        &lt;h3&gt;&#123;&#123; item.name &#125;&#125;&lt;/h3&gt;</span><br><span class="line">        &lt;p&gt;￥&#123;&#123; item.price &#125;&#125;&lt;/p&gt;</span><br><span class="line">      &lt;/div&gt;</span><br><span class="line">      &lt;div class=&quot;num&quot;&gt;</span><br><span class="line">        &lt;button @click=&quot;cartStore.changeNum(item.id, item.num - 1)&quot;&gt;-&lt;/button&gt;</span><br><span class="line">        &lt;span&gt;&#123;&#123; item.num &#125;&#125;&lt;/span&gt;</span><br><span class="line">        &lt;button @click=&quot;cartStore.changeNum(item.id, item.num + 1)&quot;&gt;+&lt;/button&gt;</span><br><span class="line">      &lt;/div&gt;</span><br><span class="line">      &lt;button @click=&quot;cartStore.del(item.id)&quot;&gt;删除&lt;/button&gt;</span><br><span class="line">    &lt;/div&gt;</span><br><span class="line"></span><br><span class="line">    &lt;div v-if=&quot;!list.length&quot; class=&quot;empty&quot;&gt;购物车是空的&lt;/div&gt;</span><br><span class="line"></span><br><span class="line">    &lt;footer v-if=&quot;list.length&quot; class=&quot;footer&quot;&gt;</span><br><span class="line">      &lt;span&gt;合计：&#123;&#123; totalText &#125;&#125;&lt;/span&gt;</span><br><span class="line">      &lt;button&gt;去结算&lt;/button&gt;</span><br><span class="line">    &lt;/footer&gt;</span><br><span class="line">  &lt;/div&gt;</span><br><span class="line">&lt;/template&gt;</span><br><span class="line"></span><br><span class="line">&lt;script setup&gt;</span><br><span class="line">import &#123; onMounted &#125; from &#x27;vue&#x27;</span><br><span class="line">import &#123; storeToRefs &#125; from &#x27;pinia&#x27;</span><br><span class="line">import &#123; useCartStore &#125; from &#x27;@/stores&#x27;</span><br><span class="line"></span><br><span class="line">const cartStore = useCartStore()</span><br><span class="line"></span><br><span class="line">// 数据走 storeToRefs</span><br><span class="line">const &#123; list, isAllChecked, totalText &#125; = storeToRefs(cartStore)</span><br><span class="line"></span><br><span class="line">onMounted(() =&gt; &#123;</span><br><span class="line">  cartStore.getList()</span><br><span class="line">&#125;)</span><br><span class="line">&lt;/script&gt;</span><br></pre></td></tr></table></figure>
+
+<p>注意几个细节：</p>
+<ul>
+<li><strong><code>v-model=&quot;item.checked&quot;</code> 直接绑 store 里的对象属性</strong>，改的是响应式对象内部，不需要走 action。这属于”UI 状态”，不算业务数据</li>
+<li><strong>数量增减走 action</strong>，因为要校验边界（不能小于 1）</li>
+<li><strong><code>totalText</code> 是 getter，走 <code>storeToRefs</code> 解构</strong>，模板里直接用</li>
+<li><strong>空态用 <code>v-if=&quot;!list.length&quot;</code></strong>，别让空数组渲染出一堆空 div</li>
+</ul>
+<h3 id="6-5-数据流复盘"><a href="#6-5-数据流复盘" class="headerlink" title="6.5 数据流复盘"></a>6.5 数据流复盘</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">商品列表 add(item) → store.list 变化</span><br><span class="line">                       ↓</span><br><span class="line">              count getter 自动重算</span><br><span class="line">                       ↓</span><br><span class="line">              App 角标自动更新</span><br><span class="line"></span><br><span class="line">购物车页 changeNum → store.list 变化</span><br><span class="line">                       ↓</span><br><span class="line">              total / isAllChecked 重算</span><br><span class="line">                       ↓</span><br><span class="line">              底部总价、全选框自动更新</span><br></pre></td></tr></table></figure>
+
+<p><strong>没有一处手动的”刷新界面”。</strong> 这就是状态管理的价值：数据是唯一真相，视图永远跟着它走。</p>
+<hr>
+<h2 id="七、速查表"><a href="#七、速查表" class="headerlink" title="七、速查表"></a>七、速查表</h2><h3 id="7-1-Pinia-核心-API"><a href="#7-1-Pinia-核心-API" class="headerlink" title="7.1 Pinia 核心 API"></a>7.1 Pinia 核心 API</h3><table>
+<thead>
+<tr>
+<th>用途</th>
+<th>写法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>定义 store</td>
+<td><code>defineStore(&#39;id&#39;, { state, getters, actions })</code></td>
+</tr>
+<tr>
+<td>组合式 store</td>
+<td><code>defineStore(&#39;id&#39;, () =&gt; { ... return {...} })</code></td>
+</tr>
+<tr>
+<td>使用</td>
+<td><code>const store = useXxxStore()</code></td>
+</tr>
+<tr>
+<td>读 state</td>
+<td><code>store.list</code></td>
+</tr>
+<tr>
+<td>改 state</td>
+<td><code>store.list = []</code> 或写在 action 里</td>
+</tr>
+<tr>
+<td>读 getter</td>
+<td><code>store.total</code></td>
+</tr>
+<tr>
+<td>调 action</td>
+<td><code>store.getList()</code></td>
+</tr>
+<tr>
+<td>解构数据</td>
+<td><code>storeToRefs(store)</code></td>
+</tr>
+<tr>
+<td>持久化</td>
+<td><code>pinia.use(persist)</code> + <code>persist: true</code></td>
+</tr>
+</tbody></table>
+<h3 id="7-2-Vuex-→-Pinia"><a href="#7-2-Vuex-→-Pinia" class="headerlink" title="7.2 Vuex → Pinia"></a>7.2 Vuex → Pinia</h3><table>
+<thead>
+<tr>
+<th>Vuex</th>
+<th>Pinia</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>state</code></td>
+<td><code>state: () =&gt; ({})</code> 或 <code>ref()</code></td>
+</tr>
+<tr>
+<td><code>mutations</code></td>
+<td>无，逻辑进 <code>actions</code></td>
+</tr>
+<tr>
+<td><code>commit(&#39;x&#39;, v)</code></td>
+<td><code>store.x(v)</code></td>
+</tr>
+<tr>
+<td><code>dispatch(&#39;x&#39;)</code></td>
+<td><code>store.x()</code></td>
+</tr>
+<tr>
+<td><code>getters</code></td>
+<td><code>getters</code> 或 <code>computed()</code></td>
+</tr>
+<tr>
+<td><code>modules</code> + <code>namespaced</code></td>
+<td>一文件一 store</td>
+</tr>
+<tr>
+<td><code>mapState</code></td>
+<td><code>storeToRefs</code></td>
+</tr>
+<tr>
+<td><code>this.$store.state.x</code></td>
+<td><code>useXxxStore().x</code></td>
+</tr>
+<tr>
+<td>无持久化</td>
+<td><code>pinia-plugin-persistedstate</code></td>
+</tr>
+</tbody></table>
+<h3 id="7-3-常见坑"><a href="#7-3-常见坑" class="headerlink" title="7.3 常见坑"></a>7.3 常见坑</h3><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>原因</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>store 变了视图不动</td>
+<td>直接解构了 store</td>
+<td><code>storeToRefs</code></td>
+</tr>
+<tr>
+<td>调用 action 报 <code>not a function</code></td>
+<td>action 也被 <code>storeToRefs</code> 转成 ref</td>
+<td>action 从 store 上直接取</td>
+</tr>
+<tr>
+<td>刷新后一直转圈</td>
+<td><code>loading</code> 被持久化了</td>
+<td><code>pick</code> 排除临时状态</td>
+</tr>
+<tr>
+<td>getter 里 <code>this</code> 是 undefined</td>
+<td>用了箭头函数</td>
+<td>需要 <code>this</code> 时用普通函数</td>
+</tr>
+<tr>
+<td>修改 state 没记录</td>
+<td>直接改的，没走 action</td>
+<td>约定所有改动进 action</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>状态管理篇的主干五条：</p>
+<ol>
+<li><strong>先判断要不要上</strong>：数据不属于任何一个组件、跨页面共享，才进 store；页面内的临时状态放组件里</li>
+<li><strong>Vuex 记四件套</strong>：<code>state</code> 存、<code>mutations</code> 同步改、<code>getters</code> 派生、<code>actions</code> 异步；<code>mutations</code> 必须同步，模块化必须开 <code>namespaced</code></li>
+<li><strong>Pinia 砍掉了 mutations</strong>：actions 里直接改 state，一个文件一个 store，没有嵌套和命名空间</li>
+<li><strong>解构必用 <code>storeToRefs</code></strong>：只转数据，不转方法；这是继 <code>reactive</code> 解构、<code>props</code> 解构之后的第三个同源坑</li>
+<li><strong>持久化只存该存的</strong>：<code>loading</code>、<code>error</code> 这类临时状态用 <code>pick</code> 排除，否则刷新后会出现”永远加载中”</li>
+</ol>
+<p>下一篇进项目：智慧商城的完整复盘，从 vant 按需导入、vw 适配、axios 封装，到登录链路、路由守卫、购物车与订单，把前面四篇的知识点全部落地。</p>
+<p><em>本文为 Vue 学习笔记整理，示例代码均在本地验证。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/">https://quanpp.github.io/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B/">前端教程</a><a class="post-meta__tags" href="/tags/%E5%AE%9E%E6%88%98/">实战</a><a class="post-meta__tags" href="/tags/Vue/">Vue</a><a class="post-meta__tags" href="/tags/Vue3/">Vue3</a><a class="post-meta__tags" href="/tags/Pinia/">Pinia</a><a class="post-meta__tags" href="/tags/Vuex/">Vuex</a></div><div class="post-share"><div class="social-share" data-image="/img/cover2.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路"><img class="cover" src="/img/cover3.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">智慧商城复盘：移动端电商的十个工程套路</div></div><div class="info-2"><div class="info-item-1">Vue 系列第五篇：从 vant 按需导入、vw 适配、axios 封装，到登录链路、路由守卫、搜索历史、购物车与订单，复盘一个移动端电商项目的十个工程套路。</div></div></div></a><a class="pagination-related" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫"><img class="cover" src="/img/cover1.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Vue3 路由：从 Router 4 到路由守卫</div></div><div class="info-2"><div class="info-item-1">Vue 系列第三篇：SPA 与前端路由、Router 4 配置、声明式与编程式导航、query/params 传参、重定向与 404、history 模式、路由守卫、keep-alive 缓存，附面经项目实战与速查表。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫"><img class="cover" src="/img/cover1.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-23</div><div class="info-item-2">Vue3 路由：从 Router 4 到路由守卫</div></div><div class="info-2"><div class="info-item-1">Vue 系列第三篇：SPA 与前端路由、Router 4 配置、声明式与编程式导航、query/params 传参、重定向与 404、history 模式、路由守卫、keep-alive 缓存，附面经项目实战与速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-22</div><div class="info-item-2">Vue3 组件化：从 props 到 defineModel</div></div><div class="info-2"><div class="info-item-1">Vue 系列第二篇：组件注册与 scoped、props 校验、defineEmits、v-model 与 defineModel、provide/inject、ref 拿子组件、四种插槽、自定义指令、$nextTick，附通信总览和五张速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/22/Vue3%E6%A0%B8%E5%BF%83%E8%AF%AD%E6%B3%95-%E4%BB%8E%E6%A8%A1%E6%9D%BF%E6%8C%87%E4%BB%A4%E5%88%B0%E5%93%8D%E5%BA%94%E5%BC%8F%E7%B3%BB%E7%BB%9F/" title="Vue3 核心语法：从模板指令到响应式系统"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-22</div><div class="info-item-2">Vue3 核心语法：从模板指令到响应式系统</div></div><div class="info-2"><div class="info-item-1">Vue 系列第一篇：六大指令与修饰符、class/style 绑定、ref 与 reactive、computed 与 watch、八个生命周期钩子，全按 Vue3 组合式写法，附四张速查表。</div></div></div></a><a class="pagination-related" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-24</div><div class="info-item-2">axios 实战：增删改查、图片上传与本地缓存</div></div><div class="info-2"><div class="info-item-1">用 axios 完成经典的图书管理 CRUD 业务、Bootstrap 弹框使用、图片上传 FormData、localStorage 本地缓存。</div></div></div></a><a class="pagination-related" href="/2026/10/18/Git%E5%85%A5%E9%97%A8-%E4%BB%8E%E4%B8%89%E4%B8%AA%E5%8C%BA%E5%9F%9F%E5%88%B0%E5%A4%9A%E4%BA%BA%E5%8D%8F%E5%90%8C%E5%BC%80%E5%8F%91/" title="Git 入门：从三个区域到多人协同开发"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-18</div><div class="info-item-2">Git 入门：从三个区域到多人协同开发</div></div><div class="info-2"><div class="info-item-1">Git 完整入门笔记：三个区域、文件状态、reset 三模式、分支与合并冲突、远程仓库与多人协同、部署码云 Pages，附常用命令速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-23</div><div class="info-item-2">智慧商城复盘：移动端电商的十个工程套路</div></div><div class="info-2"><div class="info-item-1">Vue 系列第五篇：从 vant 按需导入、vw 适配、axios 封装，到登录链路、路由守卫、搜索历史、购物车与订单，复盘一个移动端电商项目的十个工程套路。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E5%85%88%E9%97%AE%E4%B8%80%E5%8F%A5%EF%BC%9A%E7%9C%9F%E7%9A%84%E9%9C%80%E8%A6%81%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86%E5%90%97"><span class="toc-number">1.</span> <span class="toc-text">一、先问一句：真的需要状态管理吗</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E9%97%AE%E9%A2%98%E6%98%AF%E6%80%8E%E4%B9%88%E5%87%BA%E7%8E%B0%E7%9A%84"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 问题是怎么出现的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E8%AF%A5%E7%94%A8"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 什么时候该用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81Vuex%EF%BC%9A%E5%85%88%E8%AE%A4%E8%AF%86%E5%AE%83%EF%BC%8C%E6%89%8D%E8%83%BD%E7%9C%8B%E6%87%82%E6%97%A7%E9%A1%B9%E7%9B%AE"><span class="toc-number">2.</span> <span class="toc-text">二、Vuex：先认识它，才能看懂旧项目</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E5%9B%9B%E5%A4%A7%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 四大核心概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E5%88%9B%E5%BB%BA%E4%BB%93%E5%BA%93"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 创建仓库</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E8%AF%BB%E5%92%8C%E6%94%B9"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 读和改</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E4%B8%89%E6%9D%A1%E8%A7%84%E7%9F%A9"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 三条规矩</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-5-%E8%BE%85%E5%8A%A9%E5%87%BD%E6%95%B0%EF%BC%9A%E6%8A%8A-store-%E6%98%A0%E5%B0%84%E8%BF%9B%E7%BB%84%E4%BB%B6"><span class="toc-number">2.5.</span> <span class="toc-text">2.5 辅助函数：把 store 映射进组件</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81Pinia%EF%BC%9A%E7%8E%B0%E5%9C%A8%E7%9A%84%E6%9C%80%E4%BC%98%E8%A7%A3"><span class="toc-number">3.</span> <span class="toc-text">三、Pinia：现在的最优解</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%AE%98%E6%96%B9%E6%8E%A8%E8%8D%90%E5%AE%83"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 为什么官方推荐它</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E8%A3%85%E5%92%8C%E6%8C%82"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 装和挂</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E5%AE%9A%E4%B9%89%E4%B8%80%E4%B8%AA-store"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 定义一个 store</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-%E7%BB%84%E4%BB%B6%E9%87%8C%E6%80%8E%E4%B9%88%E7%94%A8"><span class="toc-number">3.4.</span> <span class="toc-text">3.4 组件里怎么用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-%E2%9A%A0%EF%B8%8F-%E8%A7%A3%E6%9E%84-store-%E4%BC%9A%E4%B8%A2%E5%93%8D%E5%BA%94%E6%80%A7"><span class="toc-number">3.5.</span> <span class="toc-text">3.5 ⚠️ 解构 store 会丢响应性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-6-%E4%BB%93%E5%BA%93%E7%BB%9F%E4%B8%80%E7%AE%A1%E7%90%86"><span class="toc-number">3.6.</span> <span class="toc-text">3.6 仓库统一管理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-7-%E8%B0%83%E8%AF%95"><span class="toc-number">3.7.</span> <span class="toc-text">3.7 调试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E6%8C%81%E4%B9%85%E5%8C%96%EF%BC%9A%E5%88%B7%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%88%AB%E4%B8%A2%E6%95%B0%E6%8D%AE"><span class="toc-number">4.</span> <span class="toc-text">四、持久化：刷新页面别丢数据</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%AE%98%E6%96%B9%E6%8F%92%E4%BB%B6"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 官方插件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E7%B2%BE%E7%BB%86%E9%85%8D%E7%BD%AE"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 精细配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E7%BB%84%E5%90%88%E5%BC%8F-store-%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 组合式 store 的持久化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E8%BF%81%E7%A7%BB%E5%AF%B9%E7%85%A7%E8%A1%A8%EF%BC%9AVuex-%E6%80%8E%E4%B9%88%E6%94%B9%E6%88%90-Pinia"><span class="toc-number">5.</span> <span class="toc-text">五、迁移对照表：Vuex 怎么改成 Pinia</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E5%AE%9E%E6%88%98%EF%BC%9A%E8%B4%AD%E7%89%A9%E8%BD%A6"><span class="toc-number">6.</span> <span class="toc-text">六、实战：购物车</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-store"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 store</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E5%95%86%E5%93%81%E5%88%97%E8%A1%A8%E9%A1%B5"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 商品列表页</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E8%A7%92%E6%A0%87"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 角标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-%E8%B4%AD%E7%89%A9%E8%BD%A6%E9%A1%B5%E9%9D%A2"><span class="toc-number">6.4.</span> <span class="toc-text">6.4 购物车页面</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-5-%E6%95%B0%E6%8D%AE%E6%B5%81%E5%A4%8D%E7%9B%98"><span class="toc-number">6.5.</span> <span class="toc-text">6.5 数据流复盘</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">7.</span> <span class="toc-text">七、速查表</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-Pinia-%E6%A0%B8%E5%BF%83-API"><span class="toc-number">7.1.</span> <span class="toc-text">7.1 Pinia 核心 API</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-Vuex-%E2%86%92-Pinia"><span class="toc-number">7.2.</span> <span class="toc-text">7.2 Vuex → Pinia</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E5%B8%B8%E8%A7%81%E5%9D%91"><span class="toc-number">7.3.</span> <span class="toc-text">7.3 常见坑</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">8.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/" title="大事件管理系统：从项目架构到权限控制"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="大事件管理系统：从项目架构到权限控制"/></a><div class="content"><a class="title" href="/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/" title="大事件管理系统：从项目架构到权限控制">大事件管理系统：从项目架构到权限控制</a><time datetime="2026-10-23T10:00:00.000Z" title="发表于 2026-10-23 18:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="智慧商城复盘：移动端电商的十个工程套路"/></a><div class="content"><a class="title" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路">智慧商城复盘：移动端电商的十个工程套路</a><time datetime="2026-10-23T08:00:00.000Z" title="发表于 2026-10-23 16:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/" title="Vue3 状态管理：从 Vuex 到 Pinia"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 状态管理：从 Vuex 到 Pinia"/></a><div class="content"><a class="title" href="/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/" title="Vue3 状态管理：从 Vuex 到 Pinia">Vue3 状态管理：从 Vuex 到 Pinia</a><time datetime="2026-10-23T06:00:00.000Z" title="发表于 2026-10-23 14:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 路由：从 Router 4 到路由守卫"/></a><div class="content"><a class="title" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫">Vue3 路由：从 Router 4 到路由守卫</a><time datetime="2026-10-23T02:00:00.000Z" title="发表于 2026-10-23 10:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 组件化：从 props 到 defineModel"/></a><div class="content"><a class="title" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel">Vue3 组件化：从 props 到 defineModel</a><time datetime="2026-10-22T14:00:00.000Z" title="发表于 2026-10-22 22:00:00">2026-10-22</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

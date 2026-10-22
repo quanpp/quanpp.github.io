@@ -1,0 +1,780 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>大事件管理系统：从项目架构到权限控制 | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Vue 系列最后一篇：pnpm 建项目、ESLint 与 husky 工作流、element-plus 表单校验、Pinia 仓库统一管理、请求工具五步设计、layout 架子与登录拦截，讲清企业级后台该长什么样。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大事件管理系统：从项目架构到权限控制">
+<meta property="og:url" content="https://quanpp.github.io/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="Vue 系列最后一篇：pnpm 建项目、ESLint 与 husky 工作流、element-plus 表单校验、Pinia 仓库统一管理、请求工具五步设计、layout 架子与登录拦截，讲清企业级后台该长什么样。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover1.svg">
+<meta property="article:published_time" content="2026-10-23T10:00:00.000Z">
+<meta property="article:modified_time" content="2026-10-22T12:26:48.934Z">
+<meta property="article:author" content="PP">
+<meta property="article:tag" content="Element Plus">
+<meta property="article:tag" content="Vue">
+<meta property="article:tag" content="Vue3">
+<meta property="article:tag" content="后台系统">
+<meta property="article:tag" content="项目实战">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover1.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "大事件管理系统：从项目架构到权限控制",
+  "url": "https://quanpp.github.io/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/",
+  "image": "https://quanpp.github.io/img/cover1.svg",
+  "datePublished": "2026-10-23T10:00:00.000Z",
+  "dateModified": "2026-10-22T12:26:48.934Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '大事件管理系统：从项目架构到权限控制',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  html { scroll-behavior: smooth; }
+  /* 头像悬停旋转一周 */
+  .card-info .avatar-img img { transition: transform .6s ease; }
+  .card-info .avatar-img:hover img { transform: rotate(360deg) scale(1.08); }
+  /* 首页大图标题微光晕，提升可读性 */
+  #site-title { text-shadow: 0 2px 12px rgba(0,0,0,.35); }
+  /* 文章标题更醒目 */
+  #article-container h1, #article-container h2, #article-container h3 { font-weight: 700; }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/cover1.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">大事件管理系统：从项目架构到权限控制</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">大事件管理系统：从项目架构到权限控制</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-23T10:00:00.000Z" title="发表于 2026-10-23 18:00:00">2026-10-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-22T12:26:48.934Z" title="更新于 2026-10-22 20:26:48">2026-10-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>Vue 系列最后一篇。智慧商城是”给用户看的”，这篇是”给运营用的”——后台管理系统。两者的工程要求完全不同：前台追性能，后台追<strong>规范</strong>和<strong>可维护性</strong>。学完你会知道：<code>pnpm</code> 比 <code>npm</code> 快在哪、ESLint 和 prettier 到底谁管谁、husky 为什么不能跑全量检查、element-plus 的表单校验为什么总是不生效、Pinia 仓库怎么统一收口、axios 封装那五步各自在防什么、401 为什么要单独处理，以及一个后台系统的骨架怎么搭。</p>
+</blockquote>
+<hr>
+<h2 id="一、后台系统长什么样"><a href="#一、后台系统长什么样" class="headerlink" title="一、后台系统长什么样"></a>一、后台系统长什么样</h2><h3 id="1-1-典型形态"><a href="#1-1-典型形态" class="headerlink" title="1.1 典型形态"></a>1.1 典型形态</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────────────────┐</span><br><span class="line">│  Logo        面包屑           用户头像   │  ← 顶栏</span><br><span class="line">├──────────┬──────────────────────────────┤</span><br><span class="line">│  文章管理 │                              │</span><br><span class="line">│   分类    │                              │</span><br><span class="line">│   列表    │        内容区                 │  ← 右侧主体</span><br><span class="line">│  个人中心 │      （router-view）          │</span><br><span class="line">│   资料    │                              │</span><br><span class="line">│   头像    │                              │</span><br><span class="line">│   密码    │                              │</span><br><span class="line">└──────────┴──────────────────────────────┘</span><br><span class="line">   左侧菜单</span><br></pre></td></tr></table></figure>
+
+<p><strong>左侧菜单 + 右侧内容</strong>，几乎所有的后台都长这样。所以它的路由结构也是固定的：一个 <code>layout</code> 组件包住菜单和 <code>&lt;router-view&gt;</code>，业务页面全是它的子路由。</p>
+<h3 id="1-2-页面清单"><a href="#1-2-页面清单" class="headerlink" title="1.2 页面清单"></a>1.2 页面清单</h3><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>页面</th>
+<th>用到的组件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>登录注册</td>
+<td>登录 &#x2F; 注册</td>
+<td>表单、校验</td>
+</tr>
+<tr>
+<td>文章管理</td>
+<td>文章分类</td>
+<td>表格、弹层、增删改</td>
+</tr>
+<tr>
+<td>文章管理</td>
+<td>文章列表</td>
+<td>表格、抽屉、富文本、文件上传</td>
+</tr>
+<tr>
+<td>个人中心</td>
+<td>基本资料</td>
+<td>表单</td>
+</tr>
+<tr>
+<td>个人中心</td>
+<td>更换头像</td>
+<td>文件上传、裁剪</td>
+</tr>
+<tr>
+<td>个人中心</td>
+<td>重置密码</td>
+<td>表单、校验</td>
+</tr>
+</tbody></table>
+<h3 id="1-3-技术栈"><a href="#1-3-技术栈" class="headerlink" title="1.3 技术栈"></a>1.3 技术栈</h3><table>
+<thead>
+<tr>
+<th>层</th>
+<th>选型</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>框架</td>
+<td>Vue 3 + <code>&lt;script setup&gt;</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>构建</td>
+<td>Vite</td>
+<td>秒启动</td>
+</tr>
+<tr>
+<td>包管理</td>
+<td><strong>pnpm</strong></td>
+<td>快、省磁盘、依赖严格</td>
+</tr>
+<tr>
+<td>路由</td>
+<td>Vue Router 4</td>
+<td>嵌套路由搭架子</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>Pinia</td>
+<td>用户信息 + token</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>Element Plus</td>
+<td>PC 端后台事实标准</td>
+</tr>
+<tr>
+<td>规范</td>
+<td>ESLint + prettier + husky</td>
+<td>团队协作底线</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="二、架构层：项目怎么起"><a href="#二、架构层：项目怎么起" class="headerlink" title="二、架构层：项目怎么起"></a>二、架构层：项目怎么起</h2><h3 id="2-1-pnpm-建项目"><a href="#2-1-pnpm-建项目" class="headerlink" title="2.1 pnpm 建项目"></a>2.1 pnpm 建项目</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">npm i -g pnpm</span><br><span class="line">pnpm create vue</span><br></pre></td></tr></table></figure>
+
+<p><code>pnpm</code> 相比 <code>npm</code> 有三个实际好处：</p>
+<ol>
+<li><strong>快</strong>：装依赖快 2 倍左右，靠硬链接复用本地缓存</li>
+<li><strong>省磁盘</strong>：同一个包在全局只存一份，多个项目共享</li>
+<li><strong>依赖严格</strong>：<code>npm</code> 允许你 import 没在 <code>package.json</code> 里声明的包（叫”幽灵依赖”），<code>pnpm</code> 直接报错</li>
+</ol>
+<p>第三条最重要。幽灵依赖是那种”本地能跑、CI 上挂掉”的经典故障——你用了 <code>A</code> 包，<code>A</code> 依赖 <code>B</code>，你直接 import 了 <code>B</code>，某天 <code>A</code> 升级不再依赖 <code>B</code>，你的代码就崩了。<code>pnpm</code> 从机制上堵死这个口子。</p>
+<h3 id="2-2-目录规划"><a href="#2-2-目录规划" class="headerlink" title="2.2 目录规划"></a>2.2 目录规划</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">src/</span><br><span class="line"> ├── api/                接口函数</span><br><span class="line"> │    ├── article.js</span><br><span class="line"> │    └── user.js</span><br><span class="line"> ├── assets/             静态资源</span><br><span class="line"> ├── components/         通用组件</span><br><span class="line"> ├── router/</span><br><span class="line"> │    └── index.js</span><br><span class="line"> ├── stores/</span><br><span class="line"> │    ├── index.js       Pinia 初始化 + 统一导出</span><br><span class="line"> │    └── modules/</span><br><span class="line"> │         └── user.js</span><br><span class="line"> ├── utils/</span><br><span class="line"> │    └── request.js</span><br><span class="line"> ├── views/</span><br><span class="line"> │    ├── login/</span><br><span class="line"> │    ├── layout/</span><br><span class="line"> │    ├── article/</span><br><span class="line"> │    │    ├── category.vue</span><br><span class="line"> │    │    └── manage.vue</span><br><span class="line"> │    └── user/</span><br><span class="line"> │         ├── profile.vue</span><br><span class="line"> │         ├── avatar.vue</span><br><span class="line"> │         └── password.vue</span><br><span class="line"> ├── App.vue</span><br><span class="line"> └── main.js</span><br></pre></td></tr></table></figure>
+
+<p>和智慧商城比，这里多了 <code>stores/index.js</code> 这个”统一出口”，下面第五节细说。</p>
+<h3 id="2-3-路由设计：一个-layout-包住所有页面"><a href="#2-3-路由设计：一个-layout-包住所有页面" class="headerlink" title="2.3 路由设计：一个 layout 包住所有页面"></a>2.3 路由设计：一个 layout 包住所有页面</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/router/index.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; createRouter, createWebHistory &#125; <span class="keyword">from</span> <span class="string">&#x27;vue-router&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> router = <span class="title function_">createRouter</span>(&#123;</span><br><span class="line">  <span class="attr">history</span>: <span class="title function_">createWebHistory</span>(),</span><br><span class="line">  <span class="attr">routes</span>: [</span><br><span class="line">    &#123; <span class="attr">path</span>: <span class="string">&#x27;/login&#x27;</span>, <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/login/LoginPage.vue&#x27;</span>) &#125;,</span><br><span class="line">    &#123; <span class="attr">path</span>: <span class="string">&#x27;/register&#x27;</span>, <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/login/RegisterPage.vue&#x27;</span>) &#125;,</span><br><span class="line"></span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">path</span>: <span class="string">&#x27;/&#x27;</span>,</span><br><span class="line">      <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/layout/LayoutContainer.vue&#x27;</span>),</span><br><span class="line">      <span class="attr">redirect</span>: <span class="string">&#x27;/article/manage&#x27;</span>,</span><br><span class="line">      <span class="attr">children</span>: [</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="attr">path</span>: <span class="string">&#x27;/article/manage&#x27;</span>,</span><br><span class="line">          <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/article/ArticleManage.vue&#x27;</span>)</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="attr">path</span>: <span class="string">&#x27;/article/channel&#x27;</span>,</span><br><span class="line">          <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/article/ArticleChannel.vue&#x27;</span>)</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="attr">path</span>: <span class="string">&#x27;/user/profile&#x27;</span>,</span><br><span class="line">          <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/user/UserProfile.vue&#x27;</span>)</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="attr">path</span>: <span class="string">&#x27;/user/avatar&#x27;</span>,</span><br><span class="line">          <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/user/UserAvatar.vue&#x27;</span>)</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          <span class="attr">path</span>: <span class="string">&#x27;/user/password&#x27;</span>,</span><br><span class="line">          <span class="attr">component</span>: <span class="function">() =&gt;</span> <span class="keyword">import</span>(<span class="string">&#x27;@/views/user/UpdatePassword.vue&#x27;</span>)</span><br><span class="line">        &#125;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>关键点：<strong>登录页不放在 layout 里</strong>。登录页不需要左侧菜单，它必须是独立的一级路由。</p>
+<blockquote>
+<p>子路由的 <code>path</code> 写完整路径（<code>/article/manage</code>）而不是相对路径（<code>manage</code>），这样菜单里可以直接用 <code>path</code> 做高亮判断，不用自己拼接。代价是改父路径时要改多处——后台系统路径基本不会变，这个取舍划算。</p>
+</blockquote>
+<hr>
+<h2 id="三、代码质量工作流：让规范自动执行"><a href="#三、代码质量工作流：让规范自动执行" class="headerlink" title="三、代码质量工作流：让规范自动执行"></a>三、代码质量工作流：让规范自动执行</h2><p>后台系统通常是多人协作、长期维护。<strong>规范靠”口头约定”必然失效</strong>，得靠工具卡住。</p>
+<h3 id="3-1-ESLint-和-prettier-谁管谁"><a href="#3-1-ESLint-和-prettier-谁管谁" class="headerlink" title="3.1 ESLint 和 prettier 谁管谁"></a>3.1 ESLint 和 prettier 谁管谁</h3><p>很多人搞不清这两个：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>管什么</th>
+<th>举例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>ESLint</strong></td>
+<td>代码<strong>质量</strong></td>
+<td>变量未定义、用了 <code>==</code>、props 解构</td>
+</tr>
+<tr>
+<td><strong>prettier</strong></td>
+<td>代码<strong>风格</strong></td>
+<td>引号、分号、缩进、行宽</td>
+</tr>
+</tbody></table>
+<p>ESLint 也能管风格（配 <code>prettier/prettier</code> 规则），但<strong>格式问题交给 prettier，ESLint 只管对错</strong>，职责更清楚。</p>
+<h3 id="3-2-配置"><a href="#3-2-配置" class="headerlink" title="3.2 配置"></a>3.2 配置</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// .eslintrc.cjs</span></span><br><span class="line"><span class="variable language_">module</span>.<span class="property">exports</span> = &#123;</span><br><span class="line">  <span class="attr">rules</span>: &#123;</span><br><span class="line">    <span class="string">&#x27;prettier/prettier&#x27;</span>: [</span><br><span class="line">      <span class="string">&#x27;warn&#x27;</span>,</span><br><span class="line">      &#123;</span><br><span class="line">        <span class="attr">singleQuote</span>: <span class="literal">true</span>,      <span class="comment">// 单引号</span></span><br><span class="line">        <span class="attr">semi</span>: <span class="literal">false</span>,            <span class="comment">// 不加分号</span></span><br><span class="line">        <span class="attr">printWidth</span>: <span class="number">80</span>,         <span class="comment">// 每行最多 80 字符</span></span><br><span class="line">        <span class="attr">trailingComma</span>: <span class="string">&#x27;none&#x27;</span>,  <span class="comment">// 对象/数组末尾不加逗号</span></span><br><span class="line">        <span class="attr">endOfLine</span>: <span class="string">&#x27;auto&#x27;</span>       <span class="comment">// 换行符不限制（Win/Mac 不一致）</span></span><br><span class="line">      &#125;</span><br><span class="line">    ],</span><br><span class="line">    <span class="string">&#x27;vue/multi-word-component-names&#x27;</span>: [</span><br><span class="line">      <span class="string">&#x27;warn&#x27;</span>,</span><br><span class="line">      &#123; <span class="attr">ignores</span>: [<span class="string">&#x27;index&#x27;</span>] &#125;    <span class="comment">// 允许 index.vue 单词命名</span></span><br><span class="line">    ],</span><br><span class="line">    <span class="string">&#x27;no-undef&#x27;</span>: <span class="string">&#x27;error&#x27;</span>         <span class="comment">// 用了未定义变量直接报错</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>endOfLine: &#39;auto&#39;</code> 这一行很关键。Windows 用 <code>CRLF</code>，Mac&#x2F;Linux 用 <code>LF</code>，不设成 <code>auto</code> 的话，Windows 同事提交一次，整份文件都会显示”全部修改”。</p>
+<h3 id="3-3-VSCode-保存自动修复"><a href="#3-3-VSCode-保存自动修复" class="headerlink" title="3.3 VSCode 保存自动修复"></a>3.3 VSCode 保存自动修复</h3><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// .vscode/settings.json</span></span><br><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;editor.codeActionsOnSave&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;source.fixAll&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">true</span></span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;editor.formatOnSave&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">false</span></span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>两个配置的作用：</p>
+<ul>
+<li><code>source.fixAll: true</code> —— 保存时执行 ESLint 的自动修复</li>
+<li><code>formatOnSave: false</code> —— <strong>关掉 VSCode 自带的格式化</strong></li>
+</ul>
+<p>第二条是重点。如果两个都开，ESLint 修完、VSCode 又按自己的规则格式化一遍，两边打架，代码会反复抖动。<strong>只留 ESLint 一个裁判。</strong></p>
+<h3 id="3-4-husky：提交前自动检查"><a href="#3-4-husky：提交前自动检查" class="headerlink" title="3.4 husky：提交前自动检查"></a>3.4 husky：提交前自动检查</h3><p>ESLint 靠”保存时自动修”还不够——有人用别的编辑器，有人手快直接 commit。husky 在 git 钩子上卡一道：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git init</span><br><span class="line">pnpm dlx husky-init &amp;&amp; pnpm install</span><br></pre></td></tr></table></figure>
+
+<p>这会在项目里生成 <code>.husky/pre-commit</code> 文件，改成：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pnpm lint</span><br></pre></td></tr></table></figure>
+
+<p>从此 <code>git commit</code> 前会先跑 ESLint，不通过就提交失败。</p>
+<h3 id="3-5-但全量检查太慢"><a href="#3-5-但全量检查太慢" class="headerlink" title="3.5 但全量检查太慢"></a>3.5 但全量检查太慢</h3><p><code>pnpm lint</code> 检查的是<strong>整个项目</strong>。项目大了要跑十几秒，而且历史遗留的错误一改就几十个——你想提交一个按钮颜色，被拦下来修五十个陈年警告，很快就会有人开始用 <code>--no-verify</code> 绕过。</p>
+<p>解法：<strong>只检查这次提交涉及的文件</strong>。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pnpm i lint-staged -D</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// package.json</span></span><br><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;scripts&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;lint-staged&quot;</span><span class="punctuation">:</span> <span class="string">&quot;lint-staged&quot;</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;lint-staged&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;*.&#123;js,ts,vue&#125;&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">      <span class="string">&quot;eslint --fix&quot;</span></span><br><span class="line">    <span class="punctuation">]</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># .husky/pre-commit</span></span><br><span class="line">pnpm lint-staged</span><br></pre></td></tr></table></figure>
+
+<p><code>lint-staged</code> 会拿到 <code>git diff --staged</code> 的文件列表，只对这些文件跑 ESLint 并自动修复。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><code>pnpm lint</code></th>
+<th><code>lint-staged</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>范围</td>
+<td>全项目</td>
+<td>本次暂存的文件</td>
+</tr>
+<tr>
+<td>耗时</td>
+<td>十几秒，越往后越慢</td>
+<td>一两秒</td>
+</tr>
+<tr>
+<td>历史问题</td>
+<td>全被拦下</td>
+<td>不管</td>
+</tr>
+<tr>
+<td>结果</td>
+<td>没人愿意用</td>
+<td>真的在用</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>历史遗留问题应该单独开一次”清债”提交解决，不该混在每次日常提交里。<strong>规范能落地的关键不是严格，是快。</strong></p>
+</blockquote>
+<hr>
+<h2 id="四、UI-库：element-plus"><a href="#四、UI-库：element-plus" class="headerlink" title="四、UI 库：element-plus"></a>四、UI 库：element-plus</h2><h3 id="4-1-引入"><a href="#4-1-引入" class="headerlink" title="4.1 引入"></a>4.1 引入</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pnpm add element-plus</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// main.js</span></span><br><span class="line"><span class="keyword">import</span> <span class="title class_">ElementPlus</span> <span class="keyword">from</span> <span class="string">&#x27;element-plus&#x27;</span></span><br><span class="line"><span class="keyword">import</span> <span class="string">&#x27;element-plus/dist/index.css&#x27;</span></span><br><span class="line"><span class="keyword">import</span> zhCn <span class="keyword">from</span> <span class="string">&#x27;element-plus/es/locale/lang/zh-cn&#x27;</span></span><br><span class="line"></span><br><span class="line">app.<span class="title function_">use</span>(<span class="title class_">ElementPlus</span>, &#123; <span class="attr">locale</span>: zhCn &#125;)</span><br></pre></td></tr></table></figure>
+
+<p><code>locale: zhCn</code> 别忘了。不加的话，分页器显示 “Go to”、日期选择器是英文，中文后台里很突兀。</p>
+<p>按需导入（<code>unplugin-vue-components</code> + <code>ElementPlusResolver</code>）能减体积，但后台系统首屏体积不是主要矛盾，<strong>先全量导入跑起来，上线前再优化</strong>。</p>
+<h3 id="4-2-常用组件对照"><a href="#4-2-常用组件对照" class="headerlink" title="4.2 常用组件对照"></a>4.2 常用组件对照</h3><table>
+<thead>
+<tr>
+<th>需求</th>
+<th>组件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>表单 + 校验</td>
+<td><code>el-form</code> &#x2F; <code>el-form-item</code> &#x2F; <code>el-input</code></td>
+</tr>
+<tr>
+<td>表格</td>
+<td><code>el-table</code> &#x2F; <code>el-table-column</code></td>
+</tr>
+<tr>
+<td>分页</td>
+<td><code>el-pagination</code></td>
+</tr>
+<tr>
+<td>弹窗</td>
+<td><code>el-dialog</code></td>
+</tr>
+<tr>
+<td>抽屉</td>
+<td><code>el-drawer</code></td>
+</tr>
+<tr>
+<td>确认框</td>
+<td><code>ElMessageBox.confirm</code></td>
+</tr>
+<tr>
+<td>消息提示</td>
+<td><code>ElMessage</code></td>
+</tr>
+<tr>
+<td>文件上传</td>
+<td><code>el-upload</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="五、状态层：仓库统一管理"><a href="#五、状态层：仓库统一管理" class="headerlink" title="五、状态层：仓库统一管理"></a>五、状态层：仓库统一管理</h2><h3 id="5-1-用户仓库"><a href="#5-1-用户仓库" class="headerlink" title="5.1 用户仓库"></a>5.1 用户仓库</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/stores/modules/user.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; ref &#125; <span class="keyword">from</span> <span class="string">&#x27;vue&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; defineStore &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; userGetInfoService &#125; <span class="keyword">from</span> <span class="string">&#x27;@/api/user&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">const</span> useUserStore = <span class="title function_">defineStore</span>(</span><br><span class="line">  <span class="string">&#x27;big-user&#x27;</span>,</span><br><span class="line">  <span class="function">() =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> token = <span class="title function_">ref</span>(<span class="string">&#x27;&#x27;</span>)</span><br><span class="line">    <span class="keyword">const</span> userInfo = <span class="title function_">ref</span>(&#123;&#125;)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">const</span> <span class="title function_">setToken</span> = (<span class="params">t</span>) =&gt; &#123; token.<span class="property">value</span> = t &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">const</span> <span class="title function_">getUserInfo</span> = <span class="keyword">async</span> (<span class="params"></span>) =&gt; &#123;</span><br><span class="line">      <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="title function_">userGetInfoService</span>()</span><br><span class="line">      userInfo.<span class="property">value</span> = res.<span class="property">data</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">const</span> <span class="title function_">clearUserInfo</span> = (<span class="params"></span>) =&gt; &#123;</span><br><span class="line">      token.<span class="property">value</span> = <span class="string">&#x27;&#x27;</span></span><br><span class="line">      userInfo.<span class="property">value</span> = &#123;&#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> &#123; token, userInfo, setToken, getUserInfo, clearUserInfo &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="attr">persist</span>: <span class="literal">true</span></span><br><span class="line">  &#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>用的是组合式写法（<code>ref</code> + 普通函数），和 <code>&lt;script setup&gt;</code> 一个风格，逻辑复用更自然。</p>
+<h3 id="5-2-统一收口"><a href="#5-2-统一收口" class="headerlink" title="5.2 统一收口"></a>5.2 统一收口</h3><p>问题：仓库一多，每个组件都要记路径。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ❌ 路径散落各处，仓库一挪位置全崩</span></span><br><span class="line"><span class="keyword">import</span> &#123; useUserStore &#125; <span class="keyword">from</span> <span class="string">&#x27;@/stores/modules/user&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; useArticleStore &#125; <span class="keyword">from</span> <span class="string">&#x27;@/stores/modules/article&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>做法：<code>stores/index.js</code> 里初始化 Pinia，并统一导出所有仓库。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/stores/index.js</span></span><br><span class="line"><span class="keyword">import</span> &#123; createPinia &#125; <span class="keyword">from</span> <span class="string">&#x27;pinia&#x27;</span></span><br><span class="line"><span class="keyword">import</span> persist <span class="keyword">from</span> <span class="string">&#x27;pinia-plugin-persistedstate&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> pinia = <span class="title function_">createPinia</span>()</span><br><span class="line">pinia.<span class="title function_">use</span>(persist)</span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> * <span class="keyword">from</span> <span class="string">&#x27;./modules/user&#x27;</span></span><br><span class="line"><span class="keyword">export</span> * <span class="keyword">from</span> <span class="string">&#x27;./modules/article&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> pinia</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// main.js</span></span><br><span class="line"><span class="keyword">import</span> pinia <span class="keyword">from</span> <span class="string">&#x27;@/stores&#x27;</span></span><br><span class="line">app.<span class="title function_">use</span>(pinia)</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 组件里：路径统一</span></span><br><span class="line"><span class="keyword">import</span> &#123; useUserStore &#125; <span class="keyword">from</span> <span class="string">&#x27;@/stores&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>好处是<strong>改动隔离</strong>：仓库从 <code>modules/user.js</code> 挪到 <code>modules/system/user.js</code>，只改 <code>index.js</code> 一行。</p>
+<p>这也顺便解决了另一个问题：<strong>Pinia 的初始化代码不再散在 <code>main.js</code> 里</strong>。<code>main.js</code> 只负责”装插件”，不负责”怎么装”。</p>
+<h3 id="5-3-持久化"><a href="#5-3-持久化" class="headerlink" title="5.3 持久化"></a>5.3 持久化</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pnpm add pinia-plugin-persistedstate</span><br></pre></td></tr></table></figure>
+
+<p>上面 <code>index.js</code> 里已经 <code>pinia.use(persist)</code>，仓库上加 <code>persist: true</code> 就生效。token 刷新不掉，用户不用反复登录。</p>
+<hr>
+<h2 id="六、请求层：五步设计"><a href="#六、请求层：五步设计" class="headerlink" title="六、请求层：五步设计"></a>六、请求层：五步设计</h2><p>后台的请求封装比商城更细，因为要处理的东西更多。</p>
+<h3 id="6-1-第一步：创建实例"><a href="#6-1-第一步：创建实例" class="headerlink" title="6.1 第一步：创建实例"></a>6.1 第一步：创建实例</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/utils/request.js</span></span><br><span class="line"><span class="keyword">import</span> axios <span class="keyword">from</span> <span class="string">&#x27;axios&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; <span class="title class_">ElMessage</span> &#125; <span class="keyword">from</span> <span class="string">&#x27;element-plus&#x27;</span></span><br><span class="line"><span class="keyword">import</span> router <span class="keyword">from</span> <span class="string">&#x27;@/router&#x27;</span></span><br><span class="line"><span class="keyword">import</span> &#123; useUserStore &#125; <span class="keyword">from</span> <span class="string">&#x27;@/stores&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> baseURL = <span class="string">&#x27;http://big-event-vue-api-t.itheima.net&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> instance = axios.<span class="title function_">create</span>(&#123;</span><br><span class="line">  baseURL,</span><br><span class="line">  <span class="attr">timeout</span>: <span class="number">100000</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-第二步：带-token"><a href="#6-2-第二步：带-token" class="headerlink" title="6.2 第二步：带 token"></a>6.2 第二步：带 token</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">instance.<span class="property">interceptors</span>.<span class="property">request</span>.<span class="title function_">use</span>(</span><br><span class="line">  <span class="function">(<span class="params">config</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> userStore = <span class="title function_">useUserStore</span>()</span><br><span class="line">    <span class="keyword">if</span> (userStore.<span class="property">token</span>) &#123;</span><br><span class="line">      config.<span class="property">headers</span>.<span class="property">Authorization</span> = userStore.<span class="property">token</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> config</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="function">(<span class="params">err</span>) =&gt;</span> <span class="title class_">Promise</span>.<span class="title function_">reject</span>(err)</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>⚠️ <code>useUserStore()</code> <strong>必须写在拦截器函数内部</strong>。写在文件顶部会在模块加载时执行，那时 Pinia 还没挂载，报 “no active Pinia”。</p>
+</blockquote>
+<h3 id="6-3-第三步：业务失败统一提示"><a href="#6-3-第三步：业务失败统一提示" class="headerlink" title="6.3 第三步：业务失败统一提示"></a>6.3 第三步：业务失败统一提示</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">instance.<span class="property">interceptors</span>.<span class="property">response</span>.<span class="title function_">use</span>(</span><br><span class="line">  <span class="function">(<span class="params">res</span>) =&gt;</span> &#123;</span><br><span class="line">    <span class="comment">// 后端约定：code === 0 才是成功</span></span><br><span class="line">    <span class="keyword">if</span> (res.<span class="property">data</span>.<span class="property">code</span> === <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span> res</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="title class_">ElMessage</span>(&#123;</span><br><span class="line">      <span class="attr">message</span>: res.<span class="property">data</span>.<span class="property">message</span> || <span class="string">&#x27;服务异常&#x27;</span>,</span><br><span class="line">      <span class="attr">type</span>: <span class="string">&#x27;error&#x27;</span></span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="keyword">return</span> <span class="title class_">Promise</span>.<span class="title function_">reject</span>(res.<span class="property">data</span>)</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="comment">// ...</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p><strong>HTTP 200 不代表业务成功。</strong> 后端可能返回 <code>200 + { code: 1, message: &#39;用户名已存在&#39; }</code>。这一层把”业务失败”翻译成”Promise 失败”，组件里 <code>try/catch</code> 就能统一处理。</p>
+<h3 id="6-4-第四步：为什么-return-res-而不是-res-data"><a href="#6-4-第四步：为什么-return-res-而不是-res-data" class="headerlink" title="6.4 第四步：为什么 return res 而不是 res.data"></a>6.4 第四步：为什么 <code>return res</code> 而不是 <code>res.data</code></h3><p>商城项目里我们 <code>return res.data</code>，这里 <code>return res</code>。差别在于：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 商城：return res.data</span></span><br><span class="line"><span class="keyword">const</span> res = <span class="keyword">await</span> <span class="title function_">getList</span>()</span><br><span class="line">res.<span class="property">list</span>        <span class="comment">// 直接用</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 后台：return res</span></span><br><span class="line"><span class="keyword">const</span> res = <span class="keyword">await</span> <span class="title function_">getList</span>()</span><br><span class="line">res.<span class="property">data</span>.<span class="property">data</span>   <span class="comment">// 多一层</span></span><br></pre></td></tr></table></figure>
+
+<p>看起来商城更省事。但后台保留了完整响应，好处是<strong>需要拿响应头、状态码的时候不用另起炉灶</strong>。比如下载文件时要读 <code>content-disposition</code> 拿文件名，<code>return res.data</code> 就抓瞎了。</p>
+<blockquote>
+<p>两种都可以，<strong>关键是全项目统一</strong>。一半 <code>res.data</code> 一半 <code>res</code> 是维护噩梦。</p>
+</blockquote>
+<h3 id="6-5-第五步：401-单独处理"><a href="#6-5-第五步：401-单独处理" class="headerlink" title="6.5 第五步：401 单独处理"></a>6.5 第五步：401 单独处理</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">  (err) =&gt; &#123;</span><br><span class="line">    <span class="title class_">ElMessage</span>(&#123;</span><br><span class="line">      <span class="attr">message</span>: err.<span class="property">response</span>?.<span class="property">data</span>?.<span class="property">message</span> || <span class="string">&#x27;服务异常&#x27;</span>,</span><br><span class="line">      <span class="attr">type</span>: <span class="string">&#x27;error&#x27;</span></span><br><span class="line">    &#125;)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 401：token 过期或无效，踢回登录页</span></span><br><span class="line">    <span class="keyword">if</span> (err.<span class="property">response</span>?.<span class="property">status</span> === <span class="number">401</span>) &#123;</span><br><span class="line">      router.<span class="title function_">push</span>(<span class="string">&#x27;/login&#x27;</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="title class_">Promise</span>.<span class="title function_">reject</span>(err)</span><br><span class="line">  &#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么 401 要单独处理？</strong></p>
+<p><code>code !== 0</code> 是”业务说不行”（密码错了、没权限），用户还在登录态；<code>401</code> 是”你根本没登录”（token 过期、被踢下线），必须清掉本地状态回登录页。</p>
+<p>不处理的话，用户会卡在一个空页面，反复点也没反应——因为每个请求都被拒了，而页面不知道要跳转。</p>
+<p>更严谨的做法是顺便清掉 store 里的 token：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (err.<span class="property">response</span>?.<span class="property">status</span> === <span class="number">401</span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> userStore = <span class="title function_">useUserStore</span>()</span><br><span class="line">  userStore.<span class="title function_">clearUserInfo</span>()</span><br><span class="line">  router.<span class="title function_">push</span>(<span class="string">&#x27;/login&#x27;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="七、登录注册：表单校验三件套"><a href="#七、登录注册：表单校验三件套" class="headerlink" title="七、登录注册：表单校验三件套"></a>七、登录注册：表单校验三件套</h2><h3 id="7-1-三个绑定，缺一不可"><a href="#7-1-三个绑定，缺一不可" class="headerlink" title="7.1 三个绑定，缺一不可"></a>7.1 三个绑定，缺一不可</h3><p>element-plus 的表单校验经常”配了没反应”，八成是三个绑定缺了一个：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;el-form :model=&quot;formModel&quot; :rules=&quot;rules&quot; ref=&quot;formRef&quot;&gt;</span><br><span class="line">    &lt;!--                ↑ 数据          ↑ 规则        ↑ 实例 --&gt;</span><br><span class="line"></span><br><span class="line">    &lt;el-form-item prop=&quot;username&quot;&gt;</span><br><span class="line">      &lt;!--            ↑ 必须和 rules 里的键名一致 --&gt;</span><br><span class="line">      &lt;el-input v-model=&quot;formModel.username&quot; placeholder=&quot;请输入用户名&quot; /&gt;</span><br><span class="line">    &lt;/el-form-item&gt;</span><br><span class="line"></span><br><span class="line">    &lt;el-form-item prop=&quot;password&quot;&gt;</span><br><span class="line">      &lt;el-input v-model=&quot;formModel.password&quot; type=&quot;password&quot; /&gt;</span><br><span class="line">    &lt;/el-form-item&gt;</span><br><span class="line">  &lt;/el-form&gt;</span><br><span class="line">&lt;/template&gt;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>绑定</th>
+<th>绑在哪</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>:model</code></td>
+<td><code>el-form</code></td>
+<td>校验时从哪个对象取值</td>
+</tr>
+<tr>
+<td><code>:rules</code></td>
+<td><code>el-form</code></td>
+<td>校验规则表</td>
+</tr>
+<tr>
+<td><code>prop</code></td>
+<td><code>el-form-item</code></td>
+<td><strong>这一项对应规则里的哪个键</strong></td>
+</tr>
+</tbody></table>
+<p><strong><code>prop</code> 是最容易漏的。</strong> 漏了它，规则写了也不生效，因为表单不知道这一项该用哪条规则。</p>
+<h3 id="7-2-规则"><a href="#7-2-规则" class="headerlink" title="7.2 规则"></a>7.2 规则</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> formModel = <span class="title function_">ref</span>(&#123;</span><br><span class="line">  <span class="attr">username</span>: <span class="string">&#x27;&#x27;</span>,</span><br><span class="line">  <span class="attr">password</span>: <span class="string">&#x27;&#x27;</span>,</span><br><span class="line">  <span class="attr">repassword</span>: <span class="string">&#x27;&#x27;</span></span><br><span class="line">&#125;)</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> rules = &#123;</span><br><span class="line">  <span class="attr">username</span>: [</span><br><span class="line">    &#123; <span class="attr">required</span>: <span class="literal">true</span>, <span class="attr">message</span>: <span class="string">&#x27;请输入用户名&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;blur&#x27;</span> &#125;,</span><br><span class="line">    &#123; <span class="attr">min</span>: <span class="number">5</span>, <span class="attr">max</span>: <span class="number">10</span>, <span class="attr">message</span>: <span class="string">&#x27;用户名必须是 5-10 位&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;blur&#x27;</span> &#125;</span><br><span class="line">  ],</span><br><span class="line">  <span class="attr">password</span>: [</span><br><span class="line">    &#123; <span class="attr">required</span>: <span class="literal">true</span>, <span class="attr">message</span>: <span class="string">&#x27;请输入密码&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;blur&#x27;</span> &#125;,</span><br><span class="line">    &#123;</span><br><span class="line">      <span class="attr">pattern</span>: <span class="regexp">/^\S&#123;6,15&#125;$/</span>,</span><br><span class="line">      <span class="attr">message</span>: <span class="string">&#x27;密码必须是 6-15 位非空字符&#x27;</span>,</span><br><span class="line">      <span class="attr">trigger</span>: <span class="string">&#x27;blur&#x27;</span></span><br><span class="line">    &#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>trigger</code> 两种：<code>blur</code>（失焦校验）、<code>change</code>（输入即校验）。<strong>输入框用 <code>blur</code></strong>，不然用户打第一个字就报”长度不足”，体验很差。</p>
+<h3 id="7-3-自定义校验：两次密码要一致"><a href="#7-3-自定义校验：两次密码要一致" class="headerlink" title="7.3 自定义校验：两次密码要一致"></a>7.3 自定义校验：两次密码要一致</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">repassword</span>: [</span><br><span class="line">  &#123; <span class="attr">required</span>: <span class="literal">true</span>, <span class="attr">message</span>: <span class="string">&#x27;请再次输入密码&#x27;</span>, <span class="attr">trigger</span>: <span class="string">&#x27;blur&#x27;</span> &#125;,</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="attr">pattern</span>: <span class="regexp">/^\S&#123;6,15&#125;$/</span>,</span><br><span class="line">    <span class="attr">message</span>: <span class="string">&#x27;密码必须是 6-15 位非空字符&#x27;</span>,</span><br><span class="line">    <span class="attr">trigger</span>: <span class="string">&#x27;blur&#x27;</span></span><br><span class="line">  &#125;,</span><br><span class="line">  &#123;</span><br><span class="line">    <span class="attr">validator</span>: <span class="function">(<span class="params">rule, value, callback</span>) =&gt;</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (value !== formModel.<span class="property">value</span>.<span class="property">password</span>) &#123;</span><br><span class="line">        <span class="title function_">callback</span>(<span class="keyword">new</span> <span class="title class_">Error</span>(<span class="string">&#x27;两次输入的密码不一致&#x27;</span>))</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="title function_">callback</span>()          <span class="comment">// 必须调，不调表单会一直卡在校验中</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="attr">trigger</span>: <span class="string">&#x27;blur&#x27;</span></span><br><span class="line">  &#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>自定义校验器的三个参数：<code>rule</code>（当前规则）、<code>value</code>（当前值）、<code>callback</code>（回调）。</p>
+<blockquote>
+<p>⚠️ <strong>校验通过也必须调 <code>callback()</code></strong>，不能什么都不做。不调的话 element-plus 认为校验没结束，提交按钮会一直转圈。</p>
+</blockquote>
+<h3 id="7-4-提交前统一校验"><a href="#7-4-提交前统一校验" class="headerlink" title="7.4 提交前统一校验"></a>7.4 提交前统一校验</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> formRef = <span class="title function_">ref</span>(<span class="literal">null</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> <span class="title function_">register</span> = <span class="keyword">async</span> (<span class="params"></span>) =&gt; &#123;</span><br><span class="line">  <span class="comment">// validate 返回 Promise，失败会 reject</span></span><br><span class="line">  <span class="keyword">await</span> formRef.<span class="property">value</span>.<span class="title function_">validate</span>()</span><br><span class="line"></span><br><span class="line">  <span class="keyword">await</span> <span class="title function_">registerService</span>(formModel.<span class="property">value</span>)</span><br><span class="line">  <span class="title class_">ElMessage</span>.<span class="title function_">success</span>(<span class="string">&#x27;注册成功&#x27;</span>)</span><br><span class="line">  router.<span class="title function_">push</span>(<span class="string">&#x27;/login&#x27;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>validate()</code> 不传回调时返回 Promise，配合 <code>async/await</code> 最简洁。校验失败会 reject，后面的代码不执行。</p>
+<h3 id="7-5-登录流程"><a href="#7-5-登录流程" class="headerlink" title="7.5 登录流程"></a>7.5 登录流程</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="title function_">login</span> = <span class="keyword">async</span> (<span class="params"></span>) =&gt; &#123;</span><br><span class="line">  <span class="keyword">await</span> formRef.<span class="property">value</span>.<span class="title function_">validate</span>()</span><br><span class="line"></span><br><span class="line">  <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="title function_">loginService</span>(formModel.<span class="property">value</span>)</span><br><span class="line">  userStore.<span class="title function_">setToken</span>(res.<span class="property">data</span>.<span class="property">token</span>)</span><br><span class="line">  userStore.<span class="title function_">getUserInfo</span>()</span><br><span class="line"></span><br><span class="line">  <span class="title class_">ElMessage</span>.<span class="title function_">success</span>(<span class="string">&#x27;登录成功&#x27;</span>)</span><br><span class="line">  router.<span class="title function_">push</span>(<span class="string">&#x27;/&#x27;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>三步：<strong>校验 → 拿 token 存起来 → 拉用户信息</strong>。存完 token 立刻拉信息，是因为 layout 顶部要显示头像和昵称。</p>
+<hr>
+<h2 id="八、layout-与权限"><a href="#八、layout-与权限" class="headerlink" title="八、layout 与权限"></a>八、layout 与权限</h2><h3 id="8-1-架子"><a href="#8-1-架子" class="headerlink" title="8.1 架子"></a>8.1 架子</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- src/views/layout/LayoutContainer.vue --&gt;</span><br><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;el-container class=&quot;layout&quot;&gt;</span><br><span class="line">    &lt;!-- 左侧菜单 --&gt;</span><br><span class="line">    &lt;el-aside width=&quot;200px&quot;&gt;</span><br><span class="line">      &lt;div class=&quot;logo&quot;&gt;大事件&lt;/div&gt;</span><br><span class="line">      &lt;el-menu :default-active=&quot;$route.path&quot; router&gt;</span><br><span class="line">        &lt;el-menu-item index=&quot;/article/manage&quot;&gt;文章管理&lt;/el-menu-item&gt;</span><br><span class="line">        &lt;el-menu-item index=&quot;/article/channel&quot;&gt;文章分类&lt;/el-menu-item&gt;</span><br><span class="line">        &lt;el-sub-menu index=&quot;user&quot;&gt;</span><br><span class="line">          &lt;template #title&gt;个人中心&lt;/template&gt;</span><br><span class="line">          &lt;el-menu-item index=&quot;/user/profile&quot;&gt;基本资料&lt;/el-menu-item&gt;</span><br><span class="line">          &lt;el-menu-item index=&quot;/user/avatar&quot;&gt;更换头像&lt;/el-menu-item&gt;</span><br><span class="line">          &lt;el-menu-item index=&quot;/user/password&quot;&gt;重置密码&lt;/el-menu-item&gt;</span><br><span class="line">        &lt;/el-sub-menu&gt;</span><br><span class="line">      &lt;/el-menu&gt;</span><br><span class="line">    &lt;/el-aside&gt;</span><br><span class="line"></span><br><span class="line">    &lt;el-container&gt;</span><br><span class="line">      &lt;!-- 顶栏 --&gt;</span><br><span class="line">      &lt;el-header&gt;</span><br><span class="line">        &lt;span&gt;&#123;&#123; userStore.userInfo.nickname || userStore.userInfo.username &#125;&#125;&lt;/span&gt;</span><br><span class="line">        &lt;el-dropdown @command=&quot;handleCommand&quot;&gt;</span><br><span class="line">          &lt;el-avatar :src=&quot;userStore.userInfo.user_pic&quot; /&gt;</span><br><span class="line">          &lt;template #dropdown&gt;</span><br><span class="line">            &lt;el-dropdown-menu&gt;</span><br><span class="line">              &lt;el-dropdown-item command=&quot;profile&quot;&gt;基本资料&lt;/el-dropdown-item&gt;</span><br><span class="line">              &lt;el-dropdown-item command=&quot;logout&quot;&gt;退出登录&lt;/el-dropdown-item&gt;</span><br><span class="line">            &lt;/el-dropdown-menu&gt;</span><br><span class="line">          &lt;/template&gt;</span><br><span class="line">        &lt;/el-dropdown&gt;</span><br><span class="line">      &lt;/el-header&gt;</span><br><span class="line"></span><br><span class="line">      &lt;!-- 内容区 --&gt;</span><br><span class="line">      &lt;el-main&gt;</span><br><span class="line">        &lt;router-view&gt;&lt;/router-view&gt;</span><br><span class="line">      &lt;/el-main&gt;</span><br><span class="line">    &lt;/el-container&gt;</span><br><span class="line">  &lt;/el-container&gt;</span><br><span class="line">&lt;/template&gt;</span><br></pre></td></tr></table></figure>
+
+<p>两个技巧：</p>
+<p><strong><code>el-menu</code> 加 <code>router</code> 属性。</strong> 菜单项的 <code>index</code> 直接当路由路径用，点击自动跳转，不用自己写 <code>@click</code>。</p>
+<p><strong><code>default-active=&quot;$route.path&quot;</code>。</strong> 刷新页面后菜单还能保持高亮——因为它读的是当前路由，不是”上次点了哪个”。</p>
+<h3 id="8-2-登录拦截"><a href="#8-2-登录拦截" class="headerlink" title="8.2 登录拦截"></a>8.2 登录拦截</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/router/index.js</span></span><br><span class="line"><span class="keyword">const</span> whiteList = [<span class="string">&#x27;/login&#x27;</span>, <span class="string">&#x27;/register&#x27;</span>]</span><br><span class="line"></span><br><span class="line">router.<span class="title function_">beforeEach</span>(<span class="function">(<span class="params">to</span>) =&gt;</span> &#123;</span><br><span class="line">  <span class="keyword">const</span> userStore = <span class="title function_">useUserStore</span>()</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (userStore.<span class="property">token</span>) &#123;</span><br><span class="line">    <span class="comment">// 已登录还去登录页，踢回首页</span></span><br><span class="line">    <span class="keyword">if</span> (to.<span class="property">path</span> === <span class="string">&#x27;/login&#x27;</span>) <span class="keyword">return</span> <span class="string">&#x27;/&#x27;</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 未登录</span></span><br><span class="line">  <span class="keyword">if</span> (whiteList.<span class="title function_">includes</span>(to.<span class="property">path</span>)) <span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">  <span class="keyword">return</span> <span class="string">&#x27;/login&#x27;</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>两段逻辑：<strong>有 token 就别去登录页，没 token 只能待在白名单里。</strong> 白名单只放登录和注册，其他一律拦。</p>
+<h3 id="8-3-退出登录"><a href="#8-3-退出登录" class="headerlink" title="8.3 退出登录"></a>8.3 退出登录</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="title function_">handleCommand</span> = <span class="keyword">async</span> (<span class="params">command</span>) =&gt; &#123;</span><br><span class="line">  <span class="keyword">if</span> (command === <span class="string">&#x27;logout&#x27;</span>) &#123;</span><br><span class="line">    <span class="keyword">await</span> <span class="title class_">ElMessageBox</span>.<span class="title function_">confirm</span>(<span class="string">&#x27;确定要退出登录吗？&#x27;</span>, <span class="string">&#x27;提示&#x27;</span>, &#123;</span><br><span class="line">      <span class="attr">type</span>: <span class="string">&#x27;warning&#x27;</span></span><br><span class="line">    &#125;)</span><br><span class="line">    userStore.<span class="title function_">clearUserInfo</span>()</span><br><span class="line">    router.<span class="title function_">push</span>(<span class="string">&#x27;/login&#x27;</span>)</span><br><span class="line">    <span class="title class_">ElMessage</span>.<span class="title function_">success</span>(<span class="string">&#x27;已退出&#x27;</span>)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>退出要清 token，不能只跳转。</strong> 只跳转的话 token 还在，用户手动输 <code>/article/manage</code> 又能进去。</p>
+<hr>
+<h2 id="九、业务页面：两个典型模式"><a href="#九、业务页面：两个典型模式" class="headerlink" title="九、业务页面：两个典型模式"></a>九、业务页面：两个典型模式</h2><h3 id="9-1-表格-弹层：文章分类"><a href="#9-1-表格-弹层：文章分类" class="headerlink" title="9.1 表格 + 弹层：文章分类"></a>9.1 表格 + 弹层：文章分类</h3><p>后台最常见的形态：列表展示 + 弹窗编辑。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;el-table :data=&quot;list&quot;&gt;</span><br><span class="line">    &lt;el-table-column label=&quot;分类名称&quot; prop=&quot;cate_name&quot; /&gt;</span><br><span class="line">    &lt;el-table-column label=&quot;分类别名&quot; prop=&quot;cate_alias&quot; /&gt;</span><br><span class="line">    &lt;el-table-column label=&quot;操作&quot; width=&quot;180&quot;&gt;</span><br><span class="line">      &lt;template #default=&quot;&#123; row &#125;&quot;&gt;</span><br><span class="line">        &lt;el-button link type=&quot;primary&quot; @click=&quot;openDialog(row)&quot;&gt;编辑&lt;/el-button&gt;</span><br><span class="line">        &lt;el-button link type=&quot;danger&quot; @click=&quot;del(row.id)&quot;&gt;删除&lt;/el-button&gt;</span><br><span class="line">      &lt;/template&gt;</span><br><span class="line">    &lt;/el-table-column&gt;</span><br><span class="line">  &lt;/el-table&gt;</span><br><span class="line"></span><br><span class="line">  &lt;el-dialog v-model=&quot;visible&quot; :title=&quot;form.id ? &#x27;编辑分类&#x27; : &#x27;添加分类&#x27;&quot;&gt;</span><br><span class="line">    &lt;el-form :model=&quot;form&quot; :rules=&quot;rules&quot; ref=&quot;formRef&quot;&gt;</span><br><span class="line">      &lt;el-form-item label=&quot;分类名称&quot; prop=&quot;cate_name&quot;&gt;</span><br><span class="line">        &lt;el-input v-model=&quot;form.cate_name&quot; /&gt;</span><br><span class="line">      &lt;/el-form-item&gt;</span><br><span class="line">    &lt;/el-form&gt;</span><br><span class="line">    &lt;template #footer&gt;</span><br><span class="line">      &lt;el-button @click=&quot;visible = false&quot;&gt;取消&lt;/el-button&gt;</span><br><span class="line">      &lt;el-button type=&quot;primary&quot; @click=&quot;submit&quot;&gt;确定&lt;/el-button&gt;</span><br><span class="line">    &lt;/template&gt;</span><br><span class="line">  &lt;/el-dialog&gt;</span><br><span class="line">&lt;/template&gt;</span><br></pre></td></tr></table></figure>
+
+<p>三个设计点：</p>
+<p><strong>弹层标题靠 <code>form.id</code> 判断。</strong> 有 id 是编辑，没 id 是新增。一个弹窗干两件事，不用写两套。</p>
+<p><strong>打开弹窗时重置表单。</strong> 否则上次的校验红字还留着：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="title function_">openDialog</span> = (<span class="params">row</span>) =&gt; &#123;</span><br><span class="line">  visible.<span class="property">value</span> = <span class="literal">true</span></span><br><span class="line">  form.<span class="property">value</span> = row ? &#123; ...row &#125; : &#123; <span class="attr">cate_name</span>: <span class="string">&#x27;&#x27;</span>, <span class="attr">cate_alias</span>: <span class="string">&#x27;&#x27;</span> &#125;</span><br><span class="line">  <span class="comment">// 等 DOM 更新后再清校验状态</span></span><br><span class="line">  <span class="title function_">nextTick</span>(<span class="function">() =&gt;</span> formRef.<span class="property">value</span>?.<span class="title function_">resetFields</span>())</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>删除要二次确认。</strong></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="title function_">del</span> = <span class="keyword">async</span> (<span class="params">id</span>) =&gt; &#123;</span><br><span class="line">  <span class="keyword">await</span> <span class="title class_">ElMessageBox</span>.<span class="title function_">confirm</span>(<span class="string">&#x27;确定删除该分类吗？&#x27;</span>, <span class="string">&#x27;提示&#x27;</span>, &#123; <span class="attr">type</span>: <span class="string">&#x27;warning&#x27;</span> &#125;)</span><br><span class="line">  <span class="keyword">await</span> <span class="title function_">delChannelService</span>(id)</span><br><span class="line">  <span class="title class_">ElMessage</span>.<span class="title function_">success</span>(<span class="string">&#x27;删除成功&#x27;</span>)</span><br><span class="line">  <span class="title function_">getList</span>()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="9-2-列表-抽屉：文章管理"><a href="#9-2-列表-抽屉：文章管理" class="headerlink" title="9.2 列表 + 抽屉：文章管理"></a>9.2 列表 + 抽屉：文章管理</h3><p>文章字段多（标题、分类、封面、摘要、内容），弹窗放不下，用抽屉从右侧滑出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">&lt;el-drawer v-model=&quot;drawerVisible&quot; size=&quot;50%&quot; :title=&quot;form.id ? &#x27;编辑文章&#x27; : &#x27;发布文章&#x27;&quot;&gt;</span><br><span class="line">  &lt;el-form :model=&quot;form&quot; :rules=&quot;rules&quot; ref=&quot;formRef&quot; label-width=&quot;100px&quot;&gt;</span><br><span class="line">    &lt;el-form-item label=&quot;文章标题&quot; prop=&quot;title&quot;&gt;</span><br><span class="line">      &lt;el-input v-model=&quot;form.title&quot; /&gt;</span><br><span class="line">    &lt;/el-form-item&gt;</span><br><span class="line"></span><br><span class="line">    &lt;el-form-item label=&quot;文章分类&quot; prop=&quot;cate_id&quot;&gt;</span><br><span class="line">      &lt;el-select v-model=&quot;form.cate_id&quot;&gt;</span><br><span class="line">        &lt;el-option</span><br><span class="line">          v-for=&quot;item in cateList&quot;</span><br><span class="line">          :key=&quot;item.id&quot;</span><br><span class="line">          :label=&quot;item.cate_name&quot;</span><br><span class="line">          :value=&quot;item.id&quot;</span><br><span class="line">        /&gt;</span><br><span class="line">      &lt;/el-select&gt;</span><br><span class="line">    &lt;/el-form-item&gt;</span><br><span class="line"></span><br><span class="line">    &lt;el-form-item label=&quot;文章封面&quot; prop=&quot;cover_img&quot;&gt;</span><br><span class="line">      &lt;el-upload</span><br><span class="line">        :show-file-list=&quot;false&quot;</span><br><span class="line">        :auto-upload=&quot;true&quot;</span><br><span class="line">        :http-request=&quot;uploadCover&quot;</span><br><span class="line">      &gt;</span><br><span class="line">        &lt;img v-if=&quot;form.cover_img&quot; :src=&quot;form.cover_img&quot; class=&quot;cover&quot; /&gt;</span><br><span class="line">        &lt;el-icon v-else&gt;&lt;Plus /&gt;&lt;/el-icon&gt;</span><br><span class="line">      &lt;/el-upload&gt;</span><br><span class="line">    &lt;/el-form-item&gt;</span><br><span class="line"></span><br><span class="line">    &lt;el-form-item label=&quot;文章内容&quot; prop=&quot;content&quot;&gt;</span><br><span class="line">      &lt;div class=&quot;editor&quot;&gt;富文本编辑器放这里&lt;/div&gt;</span><br><span class="line">    &lt;/el-form-item&gt;</span><br><span class="line">  &lt;/el-form&gt;</span><br><span class="line">&lt;/el-drawer&gt;</span><br></pre></td></tr></table></figure>
+
+<p><code>el-upload</code> 的 <code>http-request</code> 可以接管上传逻辑，用自己的 <code>request</code> 实例发——这样 token 会自动带上，不用额外配 <code>headers</code>。</p>
+<p><strong>编辑时要把后端数据回填到表单</strong>，注意字段名对齐：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="title function_">openDrawer</span> = <span class="keyword">async</span> (<span class="params">row</span>) =&gt; &#123;</span><br><span class="line">  drawerVisible.<span class="property">value</span> = <span class="literal">true</span></span><br><span class="line">  <span class="keyword">if</span> (row) &#123;</span><br><span class="line">    <span class="keyword">const</span> res = <span class="keyword">await</span> <span class="title function_">getArticleDetailService</span>(row.<span class="property">id</span>)</span><br><span class="line">    form.<span class="property">value</span> = res.<span class="property">data</span>          <span class="comment">// 后端字段名要和 form 一致</span></span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    form.<span class="property">value</span> = &#123; <span class="attr">title</span>: <span class="string">&#x27;&#x27;</span>, <span class="attr">cate_id</span>: <span class="string">&#x27;&#x27;</span>, <span class="attr">cover_img</span>: <span class="string">&#x27;&#x27;</span>, <span class="attr">content</span>: <span class="string">&#x27;&#x27;</span> &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>字段名不一致时手动映射，别指望”自动对得上”——<code>cover_img</code> 和 <code>coverImg</code> 差一个下划线，表单就静默为空。</p>
+<h3 id="9-3-个人中心"><a href="#9-3-个人中心" class="headerlink" title="9.3 个人中心"></a>9.3 个人中心</h3><p>三个页面共用”左侧导航 + 右侧表单”的布局，可以抽一个 <code>UserLayout</code> 组件，用 <code>&lt;router-view&gt;</code> 做出口：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">&lt;template&gt;</span><br><span class="line">  &lt;div class=&quot;user-layout&quot;&gt;</span><br><span class="line">    &lt;el-menu :default-active=&quot;$route.path&quot; router&gt;</span><br><span class="line">      &lt;el-menu-item index=&quot;/user/profile&quot;&gt;基本资料&lt;/el-menu-item&gt;</span><br><span class="line">      &lt;el-menu-item index=&quot;/user/avatar&quot;&gt;更换头像&lt;/el-menu-item&gt;</span><br><span class="line">      &lt;el-menu-item index=&quot;/user/password&quot;&gt;重置密码&lt;/el-menu-item&gt;</span><br><span class="line">    &lt;/el-menu&gt;</span><br><span class="line">    &lt;div class=&quot;content&quot;&gt;</span><br><span class="line">      &lt;router-view&gt;&lt;/router-view&gt;</span><br><span class="line">    &lt;/div&gt;</span><br><span class="line">  &lt;/div&gt;</span><br><span class="line">&lt;/template&gt;</span><br></pre></td></tr></table></figure>
+
+<p>这就是嵌套路由的第二次使用——<strong>第一次是 layout 包业务页，第二次是个人中心包三个子页</strong>。同一套机制，两层嵌套。</p>
+<hr>
+<h2 id="十、AI-提效：工具，不是代写"><a href="#十、AI-提效：工具，不是代写" class="headerlink" title="十、AI 提效：工具，不是代写"></a>十、AI 提效：工具，不是代写</h2><p>笔记里专门有两节讲 ChatGPT 和 GitHub Copilot，值得单独说。</p>
+<h3 id="10-1-定位"><a href="#10-1-定位" class="headerlink" title="10.1 定位"></a>10.1 定位</h3><p><strong>AI 是提效工具，不是代写。</strong> 生成的代码要逐行看懂再提交，尤其是权限判断和接口调用部分——这两块错了，测试环境不一定暴露，上线就是事故。</p>
+<h3 id="10-2-好用的场景"><a href="#10-2-好用的场景" class="headerlink" title="10.2 好用的场景"></a>10.2 好用的场景</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成表格列配置</td>
+<td>十几个字段的 <code>el-table-column</code>，一句话生成</td>
+</tr>
+<tr>
+<td>生成表单校验规则</td>
+<td>描述清楚规则，直接出 <code>rules</code></td>
+</tr>
+<tr>
+<td>写正则</td>
+<td>密码、手机号、邮箱的 <code>pattern</code></td>
+</tr>
+<tr>
+<td>解释陌生代码</td>
+<td>接手老项目时读不懂的写法</td>
+</tr>
+<tr>
+<td>生成 mock 数据</td>
+<td>表格调试用的假数据</td>
+</tr>
+</tbody></table>
+<h3 id="10-3-提示词怎么写"><a href="#10-3-提示词怎么写" class="headerlink" title="10.3 提示词怎么写"></a>10.3 提示词怎么写</h3><p>差：</p>
+<blockquote>
+<p>帮我写一个表格</p>
+</blockquote>
+<p>好：</p>
+<blockquote>
+<p>用 Vue3 <code>&lt;script setup&gt;</code> + element-plus 写一个文章分类表格。字段：id、cate_name、cate_alias、操作列。操作列有”编辑””删除”两个 link 按钮。删除用 <code>ElMessageBox.confirm</code> 二次确认。数据从 <code>list</code> 这个 ref 来。</p>
+</blockquote>
+<p><strong>说清楚：框架版本、UI 库、字段、交互、数据来源。</strong> 说得越具体，返工越少。</p>
+<h3 id="10-4-不要让它做的事"><a href="#10-4-不要让它做的事" class="headerlink" title="10.4 不要让它做的事"></a>10.4 不要让它做的事</h3><ul>
+<li><strong>不要让它决定权限逻辑</strong>。<code>v-if=&quot;isAdmin&quot;</code> 这种判断，AI 猜不出你的权限模型</li>
+<li><strong>不要让它写接口地址</strong>。它会编一个看起来很像的 URL</li>
+<li><strong>不要整段粘贴不看的代码</strong>。三个月后出问题，你连这是谁写的都不知道</li>
+</ul>
+<hr>
+<h2 id="十一、速查表"><a href="#十一、速查表" class="headerlink" title="十一、速查表"></a>十一、速查表</h2><h3 id="11-1-工程配置"><a href="#11-1-工程配置" class="headerlink" title="11.1 工程配置"></a>11.1 工程配置</h3><table>
+<thead>
+<tr>
+<th>项</th>
+<th>位置</th>
+<th>关键配置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ESLint</td>
+<td><code>.eslintrc.cjs</code></td>
+<td>单引号、无分号、80 字符</td>
+</tr>
+<tr>
+<td>VSCode</td>
+<td><code>.vscode/settings.json</code></td>
+<td><code>source.fixAll: true</code>、<code>formatOnSave: false</code></td>
+</tr>
+<tr>
+<td>husky</td>
+<td><code>.husky/pre-commit</code></td>
+<td><code>pnpm lint-staged</code></td>
+</tr>
+<tr>
+<td>lint-staged</td>
+<td><code>package.json</code></td>
+<td><code>*.{js,ts,vue}</code> → <code>eslint --fix</code></td>
+</tr>
+<tr>
+<td>Pinia</td>
+<td><code>stores/index.js</code></td>
+<td>初始化 + <code>export *</code></td>
+</tr>
+<tr>
+<td>请求</td>
+<td><code>utils/request.js</code></td>
+<td>五步拦截器</td>
+</tr>
+</tbody></table>
+<h3 id="11-2-请求工具五步"><a href="#11-2-请求工具五步" class="headerlink" title="11.2 请求工具五步"></a>11.2 请求工具五步</h3><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>位置</th>
+<th>防什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1. 创建实例</td>
+<td><code>axios.create</code></td>
+<td>统一 baseURL、超时</td>
+</tr>
+<tr>
+<td>2. 带 token</td>
+<td>请求拦截器</td>
+<td>每个请求手写 header</td>
+</tr>
+<tr>
+<td>3. 业务失败</td>
+<td>响应拦截器</td>
+<td><code>200 + code!==0</code> 被当成功</td>
+</tr>
+<tr>
+<td>4. 摘数据</td>
+<td>响应拦截器</td>
+<td>每处 <code>res.data.data</code></td>
+</tr>
+<tr>
+<td>5. 401 处理</td>
+<td>错误回调</td>
+<td>token 过期后卡死</td>
+</tr>
+</tbody></table>
+<h3 id="11-3-表单校验三件套"><a href="#11-3-表单校验三件套" class="headerlink" title="11.3 表单校验三件套"></a>11.3 表单校验三件套</h3><table>
+<thead>
+<tr>
+<th>绑定</th>
+<th>位置</th>
+<th>漏了会怎样</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>:model</code></td>
+<td><code>el-form</code></td>
+<td>拿不到值，全部校验失效</td>
+</tr>
+<tr>
+<td><code>:rules</code></td>
+<td><code>el-form</code></td>
+<td>没有规则</td>
+</tr>
+<tr>
+<td><code>prop</code></td>
+<td><code>el-form-item</code></td>
+<td><strong>这一项不校验</strong>（最常见）</td>
+</tr>
+</tbody></table>
+<h3 id="11-4-后台骨架"><a href="#11-4-后台骨架" class="headerlink" title="11.4 后台骨架"></a>11.4 后台骨架</h3><table>
+<thead>
+<tr>
+<th>需求</th>
+<th>方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>左侧菜单 + 右侧内容</td>
+<td><code>layout</code> 组件 + 子路由</td>
+</tr>
+<tr>
+<td>菜单高亮</td>
+<td><code>el-menu</code> 的 <code>router</code> + <code>default-active=&quot;$route.path&quot;</code></td>
+</tr>
+<tr>
+<td>登录拦截</td>
+<td><code>beforeEach</code> + 白名单</td>
+</tr>
+<tr>
+<td>退出登录</td>
+<td>清 store + 跳登录页</td>
+</tr>
+<tr>
+<td>列表 + 编辑</td>
+<td><code>el-table</code> + <code>el-dialog</code>（字段少）</td>
+</tr>
+<tr>
+<td>列表 + 编辑</td>
+<td><code>el-table</code> + <code>el-drawer</code>（字段多）</td>
+</tr>
+<tr>
+<td>二次确认</td>
+<td><code>ElMessageBox.confirm</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>后台系统篇的主干五条：</p>
+<ol>
+<li><strong>后台的骨架是固定的</strong>：<code>layout</code> 包住菜单和 <code>&lt;router-view&gt;</code>，业务页全是子路由；登录页必须在一级、不进 layout</li>
+<li><strong>规范要自动执行</strong>：ESLint 管质量、prettier 管风格、husky 卡提交；<strong>关键不是严，是快</strong>——<code>lint-staged</code> 只查暂存文件，全量检查没人愿意用</li>
+<li><strong>Pinia 要统一收口</strong>：<code>stores/index.js</code> 里初始化并 <code>export *</code>，组件一律 <code>from &#39;@/stores&#39;</code>，仓库挪位置只改一行</li>
+<li><strong>请求五步各有其防</strong>：带 token 防手写、业务码防”假成功”、401 防卡死；<code>return res</code> 还是 <code>res.data</code> 全项目统一就行</li>
+<li><strong>表单校验三个绑定</strong>：<code>:model</code>、<code>:rules</code>、<code>prop</code>，漏一个就不生效；自定义 <code>validator</code> 通过也必须调 <code>callback()</code></li>
+</ol>
+<p>六篇下来，Vue 的主干全在这：</p>
+<ul>
+<li><strong>语法层</strong>：指令管视图、<code>ref</code>&#x2F;<code>reactive</code> 管数据、<code>computed</code> 管算、<code>watch</code> 管做、生命周期管时机</li>
+<li><strong>组件层</strong>：props 单向流、emit 往上喊、<code>defineModel</code> 双向绑、插槽开结构、指令封行为、<code>ref</code> + <code>defineExpose</code> 拿实例</li>
+<li><strong>路由层</strong>：<code>router-view</code> 是出口、<code>router-link</code> 是入口、query 传多个 params 传一个、守卫拦登录、<code>keep-alive</code> 保状态</li>
+<li><strong>状态层</strong>：Vuex 四件套读旧代码、Pinia 砍掉 mutations、<code>storeToRefs</code> 解构保响应</li>
+<li><strong>工程层</strong>：三层请求结构、登录三件套、按需导入与懒加载、ESLint + husky 兜底</li>
+</ul>
+<p>零件齐了，去写项目吧。</p>
+<p><em>本文为 Vue 项目学习笔记整理，示例代码均在本地验证。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/">https://quanpp.github.io/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Vue/">Vue</a><a class="post-meta__tags" href="/tags/Vue3/">Vue3</a><a class="post-meta__tags" href="/tags/Element-Plus/">Element Plus</a><a class="post-meta__tags" href="/tags/%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98/">项目实战</a><a class="post-meta__tags" href="/tags/%E5%90%8E%E5%8F%B0%E7%B3%BB%E7%BB%9F/">后台系统</a></div><div class="post-share"><div class="social-share" data-image="/img/cover1.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路"><img class="cover" src="/img/cover3.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">智慧商城复盘：移动端电商的十个工程套路</div></div><div class="info-2"><div class="info-item-1">Vue 系列第五篇：从 vant 按需导入、vw 适配、axios 封装，到登录链路、路由守卫、搜索历史、购物车与订单，复盘一个移动端电商项目的十个工程套路。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-23</div><div class="info-item-2">智慧商城复盘：移动端电商的十个工程套路</div></div><div class="info-2"><div class="info-item-1">Vue 系列第五篇：从 vant 按需导入、vw 适配、axios 封装，到登录链路、路由守卫、搜索历史、购物车与订单，复盘一个移动端电商项目的十个工程套路。</div></div></div></a><a class="pagination-related" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫"><img class="cover" src="/img/cover1.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-23</div><div class="info-item-2">Vue3 路由：从 Router 4 到路由守卫</div></div><div class="info-2"><div class="info-item-1">Vue 系列第三篇：SPA 与前端路由、Router 4 配置、声明式与编程式导航、query/params 传参、重定向与 404、history 模式、路由守卫、keep-alive 缓存，附面经项目实战与速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-22</div><div class="info-item-2">Vue3 组件化：从 props 到 defineModel</div></div><div class="info-2"><div class="info-item-1">Vue 系列第二篇：组件注册与 scoped、props 校验、defineEmits、v-model 与 defineModel、provide/inject、ref 拿子组件、四种插槽、自定义指令、$nextTick，附通信总览和五张速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/22/Vue3%E6%A0%B8%E5%BF%83%E8%AF%AD%E6%B3%95-%E4%BB%8E%E6%A8%A1%E6%9D%BF%E6%8C%87%E4%BB%A4%E5%88%B0%E5%93%8D%E5%BA%94%E5%BC%8F%E7%B3%BB%E7%BB%9F/" title="Vue3 核心语法：从模板指令到响应式系统"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-22</div><div class="info-item-2">Vue3 核心语法：从模板指令到响应式系统</div></div><div class="info-2"><div class="info-item-1">Vue 系列第一篇：六大指令与修饰符、class/style 绑定、ref 与 reactive、computed 与 watch、八个生命周期钩子，全按 Vue3 组合式写法，附四张速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/" title="Vue3 状态管理：从 Vuex 到 Pinia"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-23</div><div class="info-item-2">Vue3 状态管理：从 Vuex 到 Pinia</div></div><div class="info-2"><div class="info-item-1">Vue 系列第四篇：Vuex 四大件与辅助函数（读旧代码用）、Pinia 两种写法、storeToRefs、持久化、Vuex 到 Pinia 迁移对照表，附购物车实战与速查表。</div></div></div></a><a class="pagination-related" href="/2026/09/26/%E9%BB%91%E9%A9%AC%E5%A4%B4%E6%9D%A1%E9%A1%B9%E7%9B%AE/" title="黑马头条数据管理平台：从登录鉴权到文章管理的完整复盘"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-26</div><div class="info-item-2">黑马头条数据管理平台：从登录鉴权到文章管理的完整复盘</div></div><div class="info-2"><div class="info-item-1">复盘黑马头条数据管理平台项目：token 登录、axios 拦截器、文章列表筛选分页、富文本编辑器、图片上传、编辑回显、退出登录，以及同样的功能用 Vue3 怎么写。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E5%90%8E%E5%8F%B0%E7%B3%BB%E7%BB%9F%E9%95%BF%E4%BB%80%E4%B9%88%E6%A0%B7"><span class="toc-number">1.</span> <span class="toc-text">一、后台系统长什么样</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E5%85%B8%E5%9E%8B%E5%BD%A2%E6%80%81"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 典型形态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E9%A1%B5%E9%9D%A2%E6%B8%85%E5%8D%95"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 页面清单</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-%E6%8A%80%E6%9C%AF%E6%A0%88"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 技术栈</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E6%9E%B6%E6%9E%84%E5%B1%82%EF%BC%9A%E9%A1%B9%E7%9B%AE%E6%80%8E%E4%B9%88%E8%B5%B7"><span class="toc-number">2.</span> <span class="toc-text">二、架构层：项目怎么起</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-pnpm-%E5%BB%BA%E9%A1%B9%E7%9B%AE"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 pnpm 建项目</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E7%9B%AE%E5%BD%95%E8%A7%84%E5%88%92"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 目录规划</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E8%B7%AF%E7%94%B1%E8%AE%BE%E8%AE%A1%EF%BC%9A%E4%B8%80%E4%B8%AA-layout-%E5%8C%85%E4%BD%8F%E6%89%80%E6%9C%89%E9%A1%B5%E9%9D%A2"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 路由设计：一个 layout 包住所有页面</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E4%BB%A3%E7%A0%81%E8%B4%A8%E9%87%8F%E5%B7%A5%E4%BD%9C%E6%B5%81%EF%BC%9A%E8%AE%A9%E8%A7%84%E8%8C%83%E8%87%AA%E5%8A%A8%E6%89%A7%E8%A1%8C"><span class="toc-number">3.</span> <span class="toc-text">三、代码质量工作流：让规范自动执行</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-ESLint-%E5%92%8C-prettier-%E8%B0%81%E7%AE%A1%E8%B0%81"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 ESLint 和 prettier 谁管谁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E9%85%8D%E7%BD%AE"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-VSCode-%E4%BF%9D%E5%AD%98%E8%87%AA%E5%8A%A8%E4%BF%AE%E5%A4%8D"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 VSCode 保存自动修复</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-husky%EF%BC%9A%E6%8F%90%E4%BA%A4%E5%89%8D%E8%87%AA%E5%8A%A8%E6%A3%80%E6%9F%A5"><span class="toc-number">3.4.</span> <span class="toc-text">3.4 husky：提交前自动检查</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-%E4%BD%86%E5%85%A8%E9%87%8F%E6%A3%80%E6%9F%A5%E5%A4%AA%E6%85%A2"><span class="toc-number">3.5.</span> <span class="toc-text">3.5 但全量检查太慢</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81UI-%E5%BA%93%EF%BC%9Aelement-plus"><span class="toc-number">4.</span> <span class="toc-text">四、UI 库：element-plus</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%BC%95%E5%85%A5"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 引入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E5%B8%B8%E7%94%A8%E7%BB%84%E4%BB%B6%E5%AF%B9%E7%85%A7"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 常用组件对照</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E7%8A%B6%E6%80%81%E5%B1%82%EF%BC%9A%E4%BB%93%E5%BA%93%E7%BB%9F%E4%B8%80%E7%AE%A1%E7%90%86"><span class="toc-number">5.</span> <span class="toc-text">五、状态层：仓库统一管理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E7%94%A8%E6%88%B7%E4%BB%93%E5%BA%93"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 用户仓库</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E7%BB%9F%E4%B8%80%E6%94%B6%E5%8F%A3"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 统一收口</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 持久化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E8%AF%B7%E6%B1%82%E5%B1%82%EF%BC%9A%E4%BA%94%E6%AD%A5%E8%AE%BE%E8%AE%A1"><span class="toc-number">6.</span> <span class="toc-text">六、请求层：五步设计</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E7%AC%AC%E4%B8%80%E6%AD%A5%EF%BC%9A%E5%88%9B%E5%BB%BA%E5%AE%9E%E4%BE%8B"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 第一步：创建实例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E7%AC%AC%E4%BA%8C%E6%AD%A5%EF%BC%9A%E5%B8%A6-token"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 第二步：带 token</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E7%AC%AC%E4%B8%89%E6%AD%A5%EF%BC%9A%E4%B8%9A%E5%8A%A1%E5%A4%B1%E8%B4%A5%E7%BB%9F%E4%B8%80%E6%8F%90%E7%A4%BA"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 第三步：业务失败统一提示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-%E7%AC%AC%E5%9B%9B%E6%AD%A5%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88-return-res-%E8%80%8C%E4%B8%8D%E6%98%AF-res-data"><span class="toc-number">6.4.</span> <span class="toc-text">6.4 第四步：为什么 return res 而不是 res.data</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-5-%E7%AC%AC%E4%BA%94%E6%AD%A5%EF%BC%9A401-%E5%8D%95%E7%8B%AC%E5%A4%84%E7%90%86"><span class="toc-number">6.5.</span> <span class="toc-text">6.5 第五步：401 单独处理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81%E7%99%BB%E5%BD%95%E6%B3%A8%E5%86%8C%EF%BC%9A%E8%A1%A8%E5%8D%95%E6%A0%A1%E9%AA%8C%E4%B8%89%E4%BB%B6%E5%A5%97"><span class="toc-number">7.</span> <span class="toc-text">七、登录注册：表单校验三件套</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E4%B8%89%E4%B8%AA%E7%BB%91%E5%AE%9A%EF%BC%8C%E7%BC%BA%E4%B8%80%E4%B8%8D%E5%8F%AF"><span class="toc-number">7.1.</span> <span class="toc-text">7.1 三个绑定，缺一不可</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-%E8%A7%84%E5%88%99"><span class="toc-number">7.2.</span> <span class="toc-text">7.2 规则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A0%A1%E9%AA%8C%EF%BC%9A%E4%B8%A4%E6%AC%A1%E5%AF%86%E7%A0%81%E8%A6%81%E4%B8%80%E8%87%B4"><span class="toc-number">7.3.</span> <span class="toc-text">7.3 自定义校验：两次密码要一致</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-%E6%8F%90%E4%BA%A4%E5%89%8D%E7%BB%9F%E4%B8%80%E6%A0%A1%E9%AA%8C"><span class="toc-number">7.4.</span> <span class="toc-text">7.4 提交前统一校验</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-5-%E7%99%BB%E5%BD%95%E6%B5%81%E7%A8%8B"><span class="toc-number">7.5.</span> <span class="toc-text">7.5 登录流程</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81layout-%E4%B8%8E%E6%9D%83%E9%99%90"><span class="toc-number">8.</span> <span class="toc-text">八、layout 与权限</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E6%9E%B6%E5%AD%90"><span class="toc-number">8.1.</span> <span class="toc-text">8.1 架子</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E7%99%BB%E5%BD%95%E6%8B%A6%E6%88%AA"><span class="toc-number">8.2.</span> <span class="toc-text">8.2 登录拦截</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E9%80%80%E5%87%BA%E7%99%BB%E5%BD%95"><span class="toc-number">8.3.</span> <span class="toc-text">8.3 退出登录</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E4%B8%9A%E5%8A%A1%E9%A1%B5%E9%9D%A2%EF%BC%9A%E4%B8%A4%E4%B8%AA%E5%85%B8%E5%9E%8B%E6%A8%A1%E5%BC%8F"><span class="toc-number">9.</span> <span class="toc-text">九、业务页面：两个典型模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#9-1-%E8%A1%A8%E6%A0%BC-%E5%BC%B9%E5%B1%82%EF%BC%9A%E6%96%87%E7%AB%A0%E5%88%86%E7%B1%BB"><span class="toc-number">9.1.</span> <span class="toc-text">9.1 表格 + 弹层：文章分类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-2-%E5%88%97%E8%A1%A8-%E6%8A%BD%E5%B1%89%EF%BC%9A%E6%96%87%E7%AB%A0%E7%AE%A1%E7%90%86"><span class="toc-number">9.2.</span> <span class="toc-text">9.2 列表 + 抽屉：文章管理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#9-3-%E4%B8%AA%E4%BA%BA%E4%B8%AD%E5%BF%83"><span class="toc-number">9.3.</span> <span class="toc-text">9.3 个人中心</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81AI-%E6%8F%90%E6%95%88%EF%BC%9A%E5%B7%A5%E5%85%B7%EF%BC%8C%E4%B8%8D%E6%98%AF%E4%BB%A3%E5%86%99"><span class="toc-number">10.</span> <span class="toc-text">十、AI 提效：工具，不是代写</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-%E5%AE%9A%E4%BD%8D"><span class="toc-number">10.1.</span> <span class="toc-text">10.1 定位</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E5%A5%BD%E7%94%A8%E7%9A%84%E5%9C%BA%E6%99%AF"><span class="toc-number">10.2.</span> <span class="toc-text">10.2 好用的场景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-%E6%8F%90%E7%A4%BA%E8%AF%8D%E6%80%8E%E4%B9%88%E5%86%99"><span class="toc-number">10.3.</span> <span class="toc-text">10.3 提示词怎么写</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-4-%E4%B8%8D%E8%A6%81%E8%AE%A9%E5%AE%83%E5%81%9A%E7%9A%84%E4%BA%8B"><span class="toc-number">10.4.</span> <span class="toc-text">10.4 不要让它做的事</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E4%B8%80%E3%80%81%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">11.</span> <span class="toc-text">十一、速查表</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-%E5%B7%A5%E7%A8%8B%E9%85%8D%E7%BD%AE"><span class="toc-number">11.1.</span> <span class="toc-text">11.1 工程配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-%E8%AF%B7%E6%B1%82%E5%B7%A5%E5%85%B7%E4%BA%94%E6%AD%A5"><span class="toc-number">11.2.</span> <span class="toc-text">11.2 请求工具五步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-%E8%A1%A8%E5%8D%95%E6%A0%A1%E9%AA%8C%E4%B8%89%E4%BB%B6%E5%A5%97"><span class="toc-number">11.3.</span> <span class="toc-text">11.3 表单校验三件套</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-%E5%90%8E%E5%8F%B0%E9%AA%A8%E6%9E%B6"><span class="toc-number">11.4.</span> <span class="toc-text">11.4 后台骨架</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">12.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/" title="大事件管理系统：从项目架构到权限控制"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="大事件管理系统：从项目架构到权限控制"/></a><div class="content"><a class="title" href="/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/" title="大事件管理系统：从项目架构到权限控制">大事件管理系统：从项目架构到权限控制</a><time datetime="2026-10-23T10:00:00.000Z" title="发表于 2026-10-23 18:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="智慧商城复盘：移动端电商的十个工程套路"/></a><div class="content"><a class="title" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路">智慧商城复盘：移动端电商的十个工程套路</a><time datetime="2026-10-23T08:00:00.000Z" title="发表于 2026-10-23 16:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/" title="Vue3 状态管理：从 Vuex 到 Pinia"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 状态管理：从 Vuex 到 Pinia"/></a><div class="content"><a class="title" href="/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/" title="Vue3 状态管理：从 Vuex 到 Pinia">Vue3 状态管理：从 Vuex 到 Pinia</a><time datetime="2026-10-23T06:00:00.000Z" title="发表于 2026-10-23 14:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 路由：从 Router 4 到路由守卫"/></a><div class="content"><a class="title" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫">Vue3 路由：从 Router 4 到路由守卫</a><time datetime="2026-10-23T02:00:00.000Z" title="发表于 2026-10-23 10:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 组件化：从 props 到 defineModel"/></a><div class="content"><a class="title" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel">Vue3 组件化：从 props 到 defineModel</a><time datetime="2026-10-22T14:00:00.000Z" title="发表于 2026-10-22 22:00:00">2026-10-22</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>

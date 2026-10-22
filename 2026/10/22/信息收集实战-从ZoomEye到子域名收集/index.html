@@ -1,0 +1,570 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>信息收集实战：从 ZoomEye 到子域名收集 | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="信息安全课程作业完整记录：网络空间搜索引擎横评（ZoomEye&#x2F;FOFA&#x2F;Quake&#x2F;Hunter&#x2F;Shodan&#x2F;Censys）、ZoomEye 搜索语法实战、被动与主动子域名收集全流程。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="信息收集实战：从 ZoomEye 到子域名收集">
+<meta property="og:url" content="https://quanpp.github.io/2026/10/22/%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%E5%AE%9E%E6%88%98-%E4%BB%8EZoomEye%E5%88%B0%E5%AD%90%E5%9F%9F%E5%90%8D%E6%94%B6%E9%9B%86/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="信息安全课程作业完整记录：网络空间搜索引擎横评（ZoomEye&#x2F;FOFA&#x2F;Quake&#x2F;Hunter&#x2F;Shodan&#x2F;Censys）、ZoomEye 搜索语法实战、被动与主动子域名收集全流程。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover1.svg">
+<meta property="article:published_time" content="2026-10-22T11:00:00.000Z">
+<meta property="article:modified_time" content="2026-10-22T10:43:41.870Z">
+<meta property="article:author" content="PP">
+<meta property="article:tag" content="ZoomEye">
+<meta property="article:tag" content="信息收集">
+<meta property="article:tag" content="子域名">
+<meta property="article:tag" content="实战">
+<meta property="article:tag" content="网络安全">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover1.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "信息收集实战：从 ZoomEye 到子域名收集",
+  "url": "https://quanpp.github.io/2026/10/22/%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%E5%AE%9E%E6%88%98-%E4%BB%8EZoomEye%E5%88%B0%E5%AD%90%E5%9F%9F%E5%90%8D%E6%94%B6%E9%9B%86/",
+  "image": "https://quanpp.github.io/img/cover1.svg",
+  "datePublished": "2026-10-22T11:00:00.000Z",
+  "dateModified": "2026-10-22T10:43:41.870Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/10/22/%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%E5%AE%9E%E6%88%98-%E4%BB%8EZoomEye%E5%88%B0%E5%AD%90%E5%9F%9F%E5%90%8D%E6%94%B6%E9%9B%86/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '信息收集实战：从 ZoomEye 到子域名收集',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  html { scroll-behavior: smooth; }
+  /* 头像悬停旋转一周 */
+  .card-info .avatar-img img { transition: transform .6s ease; }
+  .card-info .avatar-img:hover img { transform: rotate(360deg) scale(1.08); }
+  /* 首页大图标题微光晕，提升可读性 */
+  #site-title { text-shadow: 0 2px 12px rgba(0,0,0,.35); }
+  /* 文章标题更醒目 */
+  #article-container h1, #article-container h2, #article-container h3 { font-weight: 700; }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/cover1.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">信息收集实战：从 ZoomEye 到子域名收集</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">信息收集实战：从 ZoomEye 到子域名收集</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-22T11:00:00.000Z" title="发表于 2026-10-22 19:00:00">2026-10-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-22T10:43:41.870Z" title="更新于 2026-10-22 18:43:41">2026-10-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>一次信息安全课程作业的完整记录。作业三个问题：除了 ZoomEye，还有哪些功能类似的网络空间搜索引擎？ZoomEye 的搜索语法怎么用，怎么搜？子域名收集有哪些路子？这篇按“搜索引擎横评 → ZoomEye 实战 → 子域名收集”的顺序逐一回答，顺带把被动收集和主动爆破串成一套完整流程。所有检索只搜不碰，目标仅限公开信息和自有实验环境。</p>
+</blockquote>
+<hr>
+<h2 id="一、什么是网络空间搜索引擎"><a href="#一、什么是网络空间搜索引擎" class="headerlink" title="一、什么是网络空间搜索引擎"></a>一、什么是网络空间搜索引擎</h2><p>先统一概念。网络空间搜索引擎（也叫网络空间测绘平台）干的事是：<strong>持续不断地扫描全网 IP 和域名，把开放端口、跑着的服务、用的组件、挂的证书全部结构化地存下来，建成一个可搜索的索引</strong>。</p>
+<p>用起来和百度谷歌一样——输入关键词，返回一批“联网的东西”。区别只在搜的对象：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>普通搜索引擎</th>
+<th>网络空间搜索引擎</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>搜什么</td>
+<td>网页内容</td>
+<td>联网设备、服务、组件</td>
+</tr>
+<tr>
+<td>数据哪来</td>
+<td>爬虫爬网页</td>
+<td>扫描器主动探测全网 IP</td>
+</tr>
+<tr>
+<td>一条结果</td>
+<td>一个网页链接</td>
+<td>一个 IP&#x2F;域名 + 开放端口 + 服务指纹</td>
+</tr>
+</tbody></table>
+<p>典型用途四个字：<strong>资产测绘</strong>。企业用它摸清自己暴露在互联网上的东西（资产暴露面管理），安全人员用它分析漏洞影响面（比如 Log4j 爆发时搜全网受影响资产），红队用它做信息收集，蓝队用它做威胁狩猎。</p>
+<h2 id="二、除了-ZoomEye，还有哪些（作业第一问）"><a href="#二、除了-ZoomEye，还有哪些（作业第一问）" class="headerlink" title="二、除了 ZoomEye，还有哪些（作业第一问）"></a>二、除了 ZoomEye，还有哪些（作业第一问）</h2><p>ZoomEye（钟馗之眼）是知道创宇的产品，用 Xmap（网络层扫描）+ Wmap（Web 指纹）双引擎，国内资产覆盖好。同类选手一张表看全：</p>
+<table>
+<thead>
+<tr>
+<th>引擎</th>
+<th>出品方</th>
+<th>特点</th>
+<th>适合场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>ZoomEye</strong></td>
+<td>知道创宇</td>
+<td>双引擎探测，中文界面，国内资产全</td>
+<td>国内 Web 资产、组件搜索</td>
+</tr>
+<tr>
+<td><strong>FOFA</strong></td>
+<td>华顺信安</td>
+<td>国内最常用，语法灵活，指纹&#x2F;证书检索强</td>
+<td>企业资产梳理、攻防演练</td>
+</tr>
+<tr>
+<td><strong>360 Quake</strong></td>
+<td>360</td>
+<td>数据量大更新快，支持 ICP&#x2F;备案信息</td>
+<td>资产盘点、态势感知</td>
+</tr>
+<tr>
+<td><strong>Hunter</strong></td>
+<td>奇安信</td>
+<td>威胁情报驱动，企业资产画像</td>
+<td>攻击面管理、漏洞预警</td>
+</tr>
+<tr>
+<td><strong>Shodan</strong></td>
+<td>美国（2009 年，行业鼻祖）</td>
+<td>协议覆盖最广，工控&#x2F;IoT 强</td>
+<td>全球设备、工业控制研究</td>
+</tr>
+<tr>
+<td><strong>Censys</strong></td>
+<td>美国（密歇根大学）</td>
+<td>证书&#x2F;TLS 指纹最强</td>
+<td>证书分析、域名关联</td>
+</tr>
+<tr>
+<td><strong>BinaryEdge</strong></td>
+<td>欧洲</td>
+<td>威胁情报向，云资产多</td>
+<td>交叉验证、补充数据源</td>
+</tr>
+</tbody></table>
+<p>选型建议，直接背：</p>
+<ul>
+<li><strong>国内 Web 资产</strong>：ZoomEye 或 FOFA，两家对国内站点识别最准</li>
+<li><strong>全球设备&#x2F;工控&#x2F;IoT</strong>：Shodan，老牌选手协议库最全</li>
+<li><strong>证书关联、同证书反查</strong>：Censys，证书透明度数据玩得最深</li>
+<li><strong>别只用一个</strong>：严肃的信息收集至少交叉两个引擎，数据盲区各家都有</li>
+</ul>
+<blockquote>
+<p>这些平台都有免费额度（注册账号即可，搜索次数有限制），学习用途免费档基本够用。</p>
+</blockquote>
+<h2 id="三、ZoomEye-搜索实战（作业第二问）"><a href="#三、ZoomEye-搜索实战（作业第二问）" class="headerlink" title="三、ZoomEye 搜索实战（作业第二问）"></a>三、ZoomEye 搜索实战（作业第二问）</h2><h3 id="3-1-准备工作"><a href="#3-1-准备工作" class="headerlink" title="3.1 准备工作"></a>3.1 准备工作</h3><p>官网 <code>zoomeye.ai</code>，注册登录。界面两种搜索模式，先搞清楚再搜：</p>
+<ul>
+<li><strong>Host 搜索</strong>：搜设备——IP、端口、服务 Banner、协议，偏网络层</li>
+<li><strong>Web 搜索</strong>：搜网站——网页标题、响应体、证书，偏应用层</li>
+</ul>
+<p>拿不准搜什么就用默认（全局匹配），它会把 HTTP、SSH、FTP 各种协议的结果一起返回。</p>
+<h3 id="3-2-搜索语法"><a href="#3-2-搜索语法" class="headerlink" title="3.2 搜索语法"></a>3.2 搜索语法</h3><p>ZoomEye 的语法是<strong>关键词 + 过滤器</strong>，过滤器用 <code>字段=&quot;值&quot;</code> 的形式：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>作用</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>app</code></td>
+<td>应用&#x2F;组件</td>
+<td><code>app=&quot;Apache httpd&quot;</code></td>
+</tr>
+<tr>
+<td><code>port</code></td>
+<td>端口</td>
+<td><code>port=6379</code></td>
+</tr>
+<tr>
+<td><code>service</code></td>
+<td>服务协议</td>
+<td><code>service=&quot;ssh&quot;</code></td>
+</tr>
+<tr>
+<td><code>os</code></td>
+<td>操作系统</td>
+<td><code>os=&quot;Linux&quot;</code></td>
+</tr>
+<tr>
+<td><code>device</code></td>
+<td>设备类型</td>
+<td><code>device=&quot;camera&quot;</code></td>
+</tr>
+<tr>
+<td><code>country</code> &#x2F; <code>city</code></td>
+<td>国家&#x2F;城市</td>
+<td><code>country=&quot;CN&quot;</code></td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>网页标题</td>
+<td><code>title=&quot;登录&quot;</code></td>
+</tr>
+<tr>
+<td><code>domain</code></td>
+<td>域名&#x2F;子域名</td>
+<td><code>domain=&quot;example.com&quot;</code></td>
+</tr>
+<tr>
+<td><code>ip</code> &#x2F; <code>cidr</code></td>
+<td>IP&#x2F;网段</td>
+<td><code>cidr=&quot;52.2.254.36/24&quot;</code></td>
+</tr>
+<tr>
+<td><code>ssl</code></td>
+<td>证书内容</td>
+<td><code>ssl=&quot;google&quot;</code></td>
+</tr>
+<tr>
+<td><code>vul.cve</code></td>
+<td>CVE 编号</td>
+<td><code>vul.cve=&quot;CVE-2021-44228&quot;</code></td>
+</tr>
+</tbody></table>
+<p>逻辑运算符三个：<code>&amp;&amp;</code>（并且）、<code>||</code>（或者）、<code>!=</code>（排除），括号 <code>()</code> 控制优先级。关键词加英文双引号做精确匹配。</p>
+<blockquote>
+<p>⚠️ 版本差异：老教程里大量使用 <code>port:80</code>、<code>app:nginx</code> 这种<strong>冒号语法</strong>，那是 ZoomEye 旧版写法。现在官网语法是等号形式（<code>port=80</code>），两种都可能遇到，见到冒号写法知道是旧教程就行，照新版写。</p>
+</blockquote>
+<h3 id="3-3-案例一：搜一个组件的分布"><a href="#3-3-案例一：搜一个组件的分布" class="headerlink" title="3.3 案例一：搜一个组件的分布"></a>3.3 案例一：搜一个组件的分布</h3><p>想了解某个组件在互联网上的部署情况，比如搜国内跑 Apache httpd 的资产：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">app=&quot;Apache httpd&quot; &amp;&amp; country=&quot;CN&quot;</span><br></pre></td></tr></table></figure>
+
+<p>结果页三样东西值得看：</p>
+<ol>
+<li><strong>资产列表</strong>：每条结果一个 IP，带端口、服务版本、地理位置、Banner</li>
+<li><strong>地图视图</strong>：资产的地理分布热力图，一眼看出集中在哪</li>
+<li><strong>点进详情</strong>：单个资产的完整指纹——HTTP 头、证书信息、开放端口、组件版本</li>
+</ol>
+<p><img src="/img/zoomeye-search1.png" alt="ZoomEye 组件搜索结果页（截图后替换此占位图）"></p>
+<p><img src="/img/zoomeye-detail.png" alt="ZoomEye 单个资产详情页（截图后替换此占位图）"></p>
+<h3 id="3-4-案例二：搜一个漏洞的影响面"><a href="#3-4-案例二：搜一个漏洞的影响面" class="headerlink" title="3.4 案例二：搜一个漏洞的影响面"></a>3.4 案例二：搜一个漏洞的影响面</h3><p>Log4j2（CVE-2021-44228）爆发时，安全圈的标准动作就是拿 CVE 编号直接搜受影响资产：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vul.cve=&quot;CVE-2021-44228&quot;</span><br></pre></td></tr></table></figure>
+
+<p>返回的全是命中该漏洞特征的资产——这就是漏洞影响面分析。应急响应时排查“我有没有中招”，把自家 IP 段丢进去搜一遍（<code>cidr=&quot;你的网段&quot; &amp;&amp; vul.cve=&quot;...&quot;</code>），比自己扫全网快得多。</p>
+<p><img src="/img/zoomeye-search2.png" alt="ZoomEye CVE 搜索结果页（截图后替换此占位图）"></p>
+<blockquote>
+<p>⚠️ 搜索归搜索，<strong>别手痒去连</strong>。搜索引擎返回的资产 99.99% 不属于你，连接、测试、扫描未授权目标都是违法行为。看看就好。</p>
+</blockquote>
+<h2 id="四、子域名收集（作业第三问）"><a href="#四、子域名收集（作业第三问）" class="headerlink" title="四、子域名收集（作业第三问）"></a>四、子域名收集（作业第三问）</h2><h3 id="4-1-为什么要收集子域名"><a href="#4-1-为什么要收集子域名" class="headerlink" title="4.1 为什么要收集子域名"></a>4.1 为什么要收集子域名</h3><p>主域名（example.com）大家都知道防，但 <code>test.example.com</code>、<code>admin.example.com</code>、<code>vpn.example.com</code> 这些子系统经常被遗忘——<strong>它们就是突破口</strong>。子域名收集是信息收集的核心一步，目的是把目标的完整资产清单摸出来。</p>
+<p>两条技术路线，先记原则：<strong>被动收集不碰目标，主动收集会留痕迹</strong>。</p>
+<h3 id="4-2-被动收集：不惊动任何人的方式"><a href="#4-2-被动收集：不惊动任何人的方式" class="headerlink" title="4.2 被动收集：不惊动任何人的方式"></a>4.2 被动收集：不惊动任何人的方式</h3><p><strong>证书透明度（crt.sh）</strong>——最推荐的起点。现在网站基本都用 HTTPS，证书里会写着这个证书覆盖哪些域名，一次能带出一大片子域名：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># crt.sh 查 example.com 的所有证书，提取域名，去重排序</span></span><br><span class="line">curl -s <span class="string">&quot;https://crt.sh/?q=%25.example.com&amp;output=json&quot;</span> | grep -o <span class="string">&#x27;&quot;name_value&quot;:&quot;[^&quot;]*&quot;&#x27;</span> | <span class="built_in">cut</span> -d<span class="string">&#x27;&quot;&#x27;</span> -f4 | <span class="built_in">sort</span> -u</span><br></pre></td></tr></table></figure>
+
+<p><strong>搜索引擎语法</strong>——Google&#x2F;Bing 里搜 <code>site:example.com -www</code>，把 www 排掉，剩下的都是子域名。老办法，但有效。</p>
+<p><strong>空间引擎反查</strong>——ZoomEye、FOFA、Hunter 都支持按域名查子资产：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">domain=&quot;example.com&quot;</span><br></pre></td></tr></table></figure>
+
+<p>证书、标题、IP 归属都能带出关联子域，Hunter 在这方面尤其顺手（它的定位就是企业资产画像）。</p>
+<p><strong>在线聚合工具</strong>——Virustotal、SecurityTrails、DNSdumpster、站长工具，粘个域名进去直接出列表，适合快速看一眼。</p>
+<h3 id="4-3-主动收集：字典爆破"><a href="#4-3-主动收集：字典爆破" class="headerlink" title="4.3 主动收集：字典爆破"></a>4.3 主动收集：字典爆破</h3><p>被动收集有个天花板：只能找到“暴露过”的子域。没暴露过的，只能靠<strong>字典爆破</strong>——拿一份常见子域名字典（test、dev、admin、api、vpn……），挨个拼接成 <code>字典.example.com</code>，逐个做 DNS 查询，<strong>能解析出 IP 的就是存在的子域名</strong>。</p>
+<p>工具链三档，按手感选：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>形态</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Layer 子域名挖掘机</td>
+<td>图形界面</td>
+<td>国产，可视化操作，适合入门和演示</td>
+</tr>
+<tr>
+<td>subfinder</td>
+<td>命令行</td>
+<td>Go 写的，快，被动源多，一条命令出结果</td>
+</tr>
+<tr>
+<td>OneForAll</td>
+<td>命令行</td>
+<td>Python，功能全，收集+验证一体</td>
+</tr>
+</tbody></table>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># subfinder：最省事的一条命令</span></span><br><span class="line">subfinder -d example.com -o subs.txt</span><br><span class="line"></span><br><span class="line"><span class="comment"># OneForAll：收集 + 验证一把梭</span></span><br><span class="line">python oneforall.py --target example.com run</span><br></pre></td></tr></table></figure>
+
+<p>爆破原理和我上一篇《Python 多进程与多线程：从 GIL 到子域名爆破》里手写的那个多线程爆破器一模一样——<strong>字典 × 域名拼接 → 多线程 DNS 查询 → 筛出能解析的</strong>。工具只是把字典做得更大、并发调得更好。</p>
+<h3 id="4-4-完整流程：被动-主动组合拳"><a href="#4-4-完整流程：被动-主动组合拳" class="headerlink" title="4.4 完整流程：被动 + 主动组合拳"></a>4.4 完整流程：被动 + 主动组合拳</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">第一步：被动收集（crt.sh + 搜索引擎 + 空间引擎）</span><br><span class="line">        ↓ 拿到一批“暴露过”的子域名</span><br><span class="line">第二步：字典爆破（subfinder / Layer / OneForAll）</span><br><span class="line">        ↓ 补上“没暴露过但可能存在”的</span><br><span class="line">第三步：DNS 验证（dig / nslookup）</span><br><span class="line">        ↓ 能解析出 IP 的才是真实存在的</span><br><span class="line">第四步：去重整理，形成资产清单（子域名 + IP + 服务）</span><br></pre></td></tr></table></figure>
+
+<p>收集来的子域名一定要用 <code>dig</code> 或 <code>nslookup</code> 验一遍，工具报的子域不一定都解析得通：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dig +short test.example.com</span><br></pre></td></tr></table></figure>
+
+<p><img src="/img/subdomain-passive.png" alt="被动收集结果（crt.sh&#x2F;在线工具，截图后替换此占位图）"></p>
+<p><img src="/img/subdomain-brute.png" alt="子域名爆破工具运行结果（截图后替换此占位图）"></p>
+<blockquote>
+<p>⚠️ <strong>授权红线</strong>：主动收集（字典爆破、扫描）会对目标 DNS 服务器产生请求量，只对<strong>你自己拥有或拿到书面授权</strong>的目标做。CTF 练手用官方靶场，别拿真实企业练。</p>
+</blockquote>
+<h2 id="五、速查表"><a href="#五、速查表" class="headerlink" title="五、速查表"></a>五、速查表</h2><h3 id="5-1-网络空间搜索引擎"><a href="#5-1-网络空间搜索引擎" class="headerlink" title="5.1 网络空间搜索引擎"></a>5.1 网络空间搜索引擎</h3><table>
+<thead>
+<tr>
+<th>引擎</th>
+<th>一句话定位</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ZoomEye</td>
+<td>知道创宇，双引擎，国内资产强</td>
+</tr>
+<tr>
+<td>FOFA</td>
+<td>国内最常用，语法灵活</td>
+</tr>
+<tr>
+<td>360 Quake</td>
+<td>数据量大，带备案信息</td>
+</tr>
+<tr>
+<td>Hunter</td>
+<td>奇安信，企业资产画像</td>
+</tr>
+<tr>
+<td>Shodan</td>
+<td>全球设备&#x2F;工控鼻祖</td>
+</tr>
+<tr>
+<td>Censys</td>
+<td>证书关联最强</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-ZoomEye-常用语法"><a href="#5-2-ZoomEye-常用语法" class="headerlink" title="5.2 ZoomEye 常用语法"></a>5.2 ZoomEye 常用语法</h3><table>
+<thead>
+<tr>
+<th>目的</th>
+<th>写法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>搜组件</td>
+<td><code>app=&quot;Apache httpd&quot;</code></td>
+</tr>
+<tr>
+<td>搜端口</td>
+<td><code>port=6379</code></td>
+</tr>
+<tr>
+<td>搜国家&#x2F;城市</td>
+<td><code>country=&quot;CN&quot;</code>、<code>city=&quot;Beijing&quot;</code></td>
+</tr>
+<tr>
+<td>搜网页标题</td>
+<td><code>title=&quot;登录&quot;</code></td>
+</tr>
+<tr>
+<td>搜域名资产</td>
+<td><code>domain=&quot;example.com&quot;</code></td>
+</tr>
+<tr>
+<td>搜 IP 段</td>
+<td><code>cidr=&quot;52.2.254.36/24&quot;</code></td>
+</tr>
+<tr>
+<td>搜漏洞</td>
+<td><code>vul.cve=&quot;CVE-2021-44228&quot;</code></td>
+</tr>
+<tr>
+<td>组合条件</td>
+<td><code>app=&quot;Redis&quot; &amp;&amp; country=&quot;CN&quot;</code></td>
+</tr>
+</tbody></table>
+<h3 id="5-3-子域名收集方法"><a href="#5-3-子域名收集方法" class="headerlink" title="5.3 子域名收集方法"></a>5.3 子域名收集方法</h3><table>
+<thead>
+<tr>
+<th>路线</th>
+<th>手段</th>
+<th>是否碰目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>被动</td>
+<td>crt.sh 证书透明</td>
+<td>否</td>
+</tr>
+<tr>
+<td>被动</td>
+<td>搜索引擎 <code>site:</code> 语法</td>
+<td>否</td>
+</tr>
+<tr>
+<td>被动</td>
+<td>ZoomEye&#x2F;FOFA&#x2F;Hunter <code>domain=</code></td>
+<td>否</td>
+</tr>
+<tr>
+<td>被动</td>
+<td>Virustotal&#x2F;SecurityTrails 等聚合站</td>
+<td>否</td>
+</tr>
+<tr>
+<td>主动</td>
+<td>Layer &#x2F; subfinder &#x2F; OneForAll 字典爆破</td>
+<td>是（需授权）</td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>作业三问，三句话收尾：</p>
+<ol>
+<li><strong>同类引擎</strong>：ZoomEye、FOFA、Quake、Hunter 四家国内 + Shodan、Censys 两家国际，国内资产用前两家，全球设备用 Shodan，证书关联用 Censys，交叉着用</li>
+<li><strong>ZoomEye 搜索</strong>：<code>字段=&quot;值&quot;</code> 是核心语法，<code>&amp;&amp;</code>&#x2F;<code>||</code>&#x2F;<code>!=</code> 组合，搜组件、搜端口、搜 CVE 影响面都是同一套；老教程的冒号语法已过时</li>
+<li><strong>子域名收集</strong>：被动（证书 + 搜索引擎 + 空间引擎）先撒网，主动（字典爆破）再补漏，最后 DNS 验证去重，形成资产清单</li>
+</ol>
+<p>信息收集是渗透测试的第一步，也是防守方资产梳理的基本功。套路都不难，难的是<strong>克制</strong>——工具越顺手，越要守住授权这条线。</p>
+<p><em>本文为信息安全课程作业记录，所有检索基于公开网络空间测绘数据与自有实验环境，仅用于学习研究。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/10/22/%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%E5%AE%9E%E6%88%98-%E4%BB%8EZoomEye%E5%88%B0%E5%AD%90%E5%9F%9F%E5%90%8D%E6%94%B6%E9%9B%86/">https://quanpp.github.io/2026/10/22/%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86%E5%AE%9E%E6%88%98-%E4%BB%8EZoomEye%E5%88%B0%E5%AD%90%E5%9F%9F%E5%90%8D%E6%94%B6%E9%9B%86/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%AE%9E%E6%88%98/">实战</a><a class="post-meta__tags" href="/tags/%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8/">网络安全</a><a class="post-meta__tags" href="/tags/ZoomEye/">ZoomEye</a><a class="post-meta__tags" href="/tags/%E4%BF%A1%E6%81%AF%E6%94%B6%E9%9B%86/">信息收集</a><a class="post-meta__tags" href="/tags/%E5%AD%90%E5%9F%9F%E5%90%8D/">子域名</a></div><div class="post-share"><div class="social-share" data-image="/img/cover1.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/10/22/Vue3%E6%A0%B8%E5%BF%83%E8%AF%AD%E6%B3%95-%E4%BB%8E%E6%A8%A1%E6%9D%BF%E6%8C%87%E4%BB%A4%E5%88%B0%E5%93%8D%E5%BA%94%E5%BC%8F%E7%B3%BB%E7%BB%9F/" title="Vue3 核心语法：从模板指令到响应式系统"><img class="cover" src="/img/cover2.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">Vue3 核心语法：从模板指令到响应式系统</div></div><div class="info-2"><div class="info-item-1">Vue 系列第一篇：六大指令与修饰符、class/style 绑定、ref 与 reactive、computed 与 watch、八个生命周期钩子，全按 Vue3 组合式写法，附四张速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/18/Git%E5%85%A5%E9%97%A8-%E4%BB%8E%E4%B8%89%E4%B8%AA%E5%8C%BA%E5%9F%9F%E5%88%B0%E5%A4%9A%E4%BA%BA%E5%8D%8F%E5%90%8C%E5%BC%80%E5%8F%91/" title="Git 入门：从三个区域到多人协同开发"><img class="cover" src="/img/cover3.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Git 入门：从三个区域到多人协同开发</div></div><div class="info-2"><div class="info-item-1">Git 完整入门笔记：三个区域、文件状态、reset 三模式、分支与合并冲突、远程仓库与多人协同、部署码云 Pages，附常用命令速查表。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/10/22/Vue3%E6%A0%B8%E5%BF%83%E8%AF%AD%E6%B3%95-%E4%BB%8E%E6%A8%A1%E6%9D%BF%E6%8C%87%E4%BB%A4%E5%88%B0%E5%93%8D%E5%BA%94%E5%BC%8F%E7%B3%BB%E7%BB%9F/" title="Vue3 核心语法：从模板指令到响应式系统"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-22</div><div class="info-item-2">Vue3 核心语法：从模板指令到响应式系统</div></div><div class="info-2"><div class="info-item-1">Vue 系列第一篇：六大指令与修饰符、class/style 绑定、ref 与 reactive、computed 与 watch、八个生命周期钩子，全按 Vue3 组合式写法，附四张速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/18/Git%E5%85%A5%E9%97%A8-%E4%BB%8E%E4%B8%89%E4%B8%AA%E5%8C%BA%E5%9F%9F%E5%88%B0%E5%A4%9A%E4%BA%BA%E5%8D%8F%E5%90%8C%E5%BC%80%E5%8F%91/" title="Git 入门：从三个区域到多人协同开发"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-18</div><div class="info-item-2">Git 入门：从三个区域到多人协同开发</div></div><div class="info-2"><div class="info-item-1">Git 完整入门笔记：三个区域、文件状态、reset 三模式、分支与合并冲突、远程仓库与多人协同、部署码云 Pages，附常用命令速查表。</div></div></div></a><a class="pagination-related" href="/2026/09/24/axios%E5%AE%9E%E6%88%98%E2%80%94%E2%80%94%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5%E4%B8%8E%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0/" title="axios 实战：增删改查、图片上传与本地缓存"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-24</div><div class="info-item-2">axios 实战：增删改查、图片上传与本地缓存</div></div><div class="info-2"><div class="info-item-1">用 axios 完成经典的图书管理 CRUD 业务、Bootstrap 弹框使用、图片上传 FormData、localStorage 本地缓存。</div></div></div></a><a class="pagination-related" href="/2026/10/15/Wireshark%E6%8A%93%E5%8C%85%E5%88%86%E6%9E%90QQ%E6%B5%81%E9%87%8F/" title="Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-15</div><div class="info-item-2">Wireshark 抓包实战：分析 QQ 流量的传输协议、加密方式与明文文件恢复</div></div><div class="info-2"><div class="info-item-1"> 一次网络流量分析实验的完整记录。用 Wireshark 抓取 QQ 的通信流量，回答三个问题：QQ 用 UDP 还是 TCP？通信是加密还是明文？能不能从流量里恢复出明文文件？顺带把 QQ 私有协议的报文结构拆了一遍，还发现了一个隐私问题。   一、实验目的本次实验要回答三个问题：  QQ 传输数据用的是 UDP 还是 TCP？ QQ 的通信是加密还是明文？ 能否从抓到的流量中恢复出明文传...</div></div></div></a><a class="pagination-related" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫"><img class="cover" src="/img/cover1.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-23</div><div class="info-item-2">Vue3 路由：从 Router 4 到路由守卫</div></div><div class="info-2"><div class="info-item-1">Vue 系列第三篇：SPA 与前端路由、Router 4 配置、声明式与编程式导航、query/params 传参、重定向与 404、history 模式、路由守卫、keep-alive 缓存，附面经项目实战与速查表。</div></div></div></a><a class="pagination-related" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-22</div><div class="info-item-2">Vue3 组件化：从 props 到 defineModel</div></div><div class="info-2"><div class="info-item-1">Vue 系列第二篇：组件注册与 scoped、props 校验、defineEmits、v-model 与 defineModel、provide/inject、ref 拿子组件、四种插槽、自定义指令、$nextTick，附通信总览和五张速查表。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">25</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">65</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%E7%BD%91%E7%BB%9C%E7%A9%BA%E9%97%B4%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E"><span class="toc-number">1.</span> <span class="toc-text">一、什么是网络空间搜索引擎</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E9%99%A4%E4%BA%86-ZoomEye%EF%BC%8C%E8%BF%98%E6%9C%89%E5%93%AA%E4%BA%9B%EF%BC%88%E4%BD%9C%E4%B8%9A%E7%AC%AC%E4%B8%80%E9%97%AE%EF%BC%89"><span class="toc-number">2.</span> <span class="toc-text">二、除了 ZoomEye，还有哪些（作业第一问）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81ZoomEye-%E6%90%9C%E7%B4%A2%E5%AE%9E%E6%88%98%EF%BC%88%E4%BD%9C%E4%B8%9A%E7%AC%AC%E4%BA%8C%E9%97%AE%EF%BC%89"><span class="toc-number">3.</span> <span class="toc-text">三、ZoomEye 搜索实战（作业第二问）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 准备工作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E6%90%9C%E7%B4%A2%E8%AF%AD%E6%B3%95"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 搜索语法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E6%A1%88%E4%BE%8B%E4%B8%80%EF%BC%9A%E6%90%9C%E4%B8%80%E4%B8%AA%E7%BB%84%E4%BB%B6%E7%9A%84%E5%88%86%E5%B8%83"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 案例一：搜一个组件的分布</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-%E6%A1%88%E4%BE%8B%E4%BA%8C%EF%BC%9A%E6%90%9C%E4%B8%80%E4%B8%AA%E6%BC%8F%E6%B4%9E%E7%9A%84%E5%BD%B1%E5%93%8D%E9%9D%A2"><span class="toc-number">3.4.</span> <span class="toc-text">3.4 案例二：搜一个漏洞的影响面</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E5%AD%90%E5%9F%9F%E5%90%8D%E6%94%B6%E9%9B%86%EF%BC%88%E4%BD%9C%E4%B8%9A%E7%AC%AC%E4%B8%89%E9%97%AE%EF%BC%89"><span class="toc-number">4.</span> <span class="toc-text">四、子域名收集（作业第三问）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E6%94%B6%E9%9B%86%E5%AD%90%E5%9F%9F%E5%90%8D"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 为什么要收集子域名</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E8%A2%AB%E5%8A%A8%E6%94%B6%E9%9B%86%EF%BC%9A%E4%B8%8D%E6%83%8A%E5%8A%A8%E4%BB%BB%E4%BD%95%E4%BA%BA%E7%9A%84%E6%96%B9%E5%BC%8F"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 被动收集：不惊动任何人的方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E4%B8%BB%E5%8A%A8%E6%94%B6%E9%9B%86%EF%BC%9A%E5%AD%97%E5%85%B8%E7%88%86%E7%A0%B4"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 主动收集：字典爆破</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B%EF%BC%9A%E8%A2%AB%E5%8A%A8-%E4%B8%BB%E5%8A%A8%E7%BB%84%E5%90%88%E6%8B%B3"><span class="toc-number">4.4.</span> <span class="toc-text">4.4 完整流程：被动 + 主动组合拳</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">5.</span> <span class="toc-text">五、速查表</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E7%BD%91%E7%BB%9C%E7%A9%BA%E9%97%B4%E6%90%9C%E7%B4%A2%E5%BC%95%E6%93%8E"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 网络空间搜索引擎</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-ZoomEye-%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 ZoomEye 常用语法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E5%AD%90%E5%9F%9F%E5%90%8D%E6%94%B6%E9%9B%86%E6%96%B9%E6%B3%95"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 子域名收集方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/" title="大事件管理系统：从项目架构到权限控制"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="大事件管理系统：从项目架构到权限控制"/></a><div class="content"><a class="title" href="/2026/10/23/%E5%A4%A7%E4%BA%8B%E4%BB%B6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F-%E4%BB%8E%E9%A1%B9%E7%9B%AE%E6%9E%B6%E6%9E%84%E5%88%B0%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6/" title="大事件管理系统：从项目架构到权限控制">大事件管理系统：从项目架构到权限控制</a><time datetime="2026-10-23T10:00:00.000Z" title="发表于 2026-10-23 18:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="智慧商城复盘：移动端电商的十个工程套路"/></a><div class="content"><a class="title" href="/2026/10/23/%E6%99%BA%E6%85%A7%E5%95%86%E5%9F%8E%E5%A4%8D%E7%9B%98-%E7%A7%BB%E5%8A%A8%E7%AB%AF%E7%94%B5%E5%95%86%E7%9A%84%E5%8D%81%E4%B8%AA%E5%B7%A5%E7%A8%8B%E5%A5%97%E8%B7%AF/" title="智慧商城复盘：移动端电商的十个工程套路">智慧商城复盘：移动端电商的十个工程套路</a><time datetime="2026-10-23T08:00:00.000Z" title="发表于 2026-10-23 16:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/" title="Vue3 状态管理：从 Vuex 到 Pinia"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 状态管理：从 Vuex 到 Pinia"/></a><div class="content"><a class="title" href="/2026/10/23/Vue3%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86-%E4%BB%8EVuex%E5%88%B0Pinia/" title="Vue3 状态管理：从 Vuex 到 Pinia">Vue3 状态管理：从 Vuex 到 Pinia</a><time datetime="2026-10-23T06:00:00.000Z" title="发表于 2026-10-23 14:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 路由：从 Router 4 到路由守卫"/></a><div class="content"><a class="title" href="/2026/10/23/Vue3%E8%B7%AF%E7%94%B1-%E4%BB%8ERouter4%E5%88%B0%E8%B7%AF%E7%94%B1%E5%AE%88%E5%8D%AB/" title="Vue3 路由：从 Router 4 到路由守卫">Vue3 路由：从 Router 4 到路由守卫</a><time datetime="2026-10-23T02:00:00.000Z" title="发表于 2026-10-23 10:00:00">2026-10-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue3 组件化：从 props 到 defineModel"/></a><div class="content"><a class="title" href="/2026/10/22/Vue3%E7%BB%84%E4%BB%B6%E5%8C%96-%E4%BB%8Eprops%E5%88%B0defineModel/" title="Vue3 组件化：从 props 到 defineModel">Vue3 组件化：从 props 到 defineModel</a><time datetime="2026-10-22T14:00:00.000Z" title="发表于 2026-10-22 22:00:00">2026-10-22</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
