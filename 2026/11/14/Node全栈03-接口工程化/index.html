@@ -1,0 +1,654 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>接口工程化：参数过滤、数据验证与统一响应 | Welcome to PP' blog</title><meta name="author" content="PP"><meta name="copyright" content="PP"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Node 全栈系列第三篇：白名单过滤防越权、模型层数据验证、SequelizeValidationError 处理、自定义错误类与 success&#x2F;failure 统一响应，把重复代码收干净。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="接口工程化：参数过滤、数据验证与统一响应">
+<meta property="og:url" content="https://quanpp.github.io/2026/11/14/Node%E5%85%A8%E6%A0%8803-%E6%8E%A5%E5%8F%A3%E5%B7%A5%E7%A8%8B%E5%8C%96/index.html">
+<meta property="og:site_name" content="Welcome to PP&#39; blog">
+<meta property="og:description" content="Node 全栈系列第三篇：白名单过滤防越权、模型层数据验证、SequelizeValidationError 处理、自定义错误类与 success&#x2F;failure 统一响应，把重复代码收干净。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://quanpp.github.io/img/cover1.svg">
+<meta property="article:published_time" content="2026-11-14T01:30:00.000Z">
+<meta property="article:modified_time" content="2026-11-15T02:51:15.052Z">
+<meta property="article:author" content="PP">
+<meta property="article:tag" content="Express">
+<meta property="article:tag" content="Node.js">
+<meta property="article:tag" content="Sequelize">
+<meta property="article:tag" content="后端入门">
+<meta property="article:tag" content="接口设计">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://quanpp.github.io/img/cover1.svg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "接口工程化：参数过滤、数据验证与统一响应",
+  "url": "https://quanpp.github.io/2026/11/14/Node%E5%85%A8%E6%A0%8803-%E6%8E%A5%E5%8F%A3%E5%B7%A5%E7%A8%8B%E5%8C%96/",
+  "image": "https://quanpp.github.io/img/cover1.svg",
+  "datePublished": "2026-11-14T01:30:00.000Z",
+  "dateModified": "2026-11-15T02:51:15.052Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "PP",
+      "url": "https://quanpp.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://quanpp.github.io/2026/11/14/Node%E5%85%A8%E6%A0%8803-%E6%8E%A5%E5%8F%A3%E5%B7%A5%E7%A8%8B%E5%8C%96/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '接口工程化：参数过滤、数据验证与统一响应',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><style>
+  html { scroll-behavior: smooth; }
+  /* 头像悬停旋转一周 */
+  .card-info .avatar-img img { transition: transform .6s ease; }
+  .card-info .avatar-img:hover img { transform: rotate(360deg) scale(1.08); }
+  /* 首页大图标题微光晕，提升可读性 */
+  #site-title { text-shadow: 0 2px 12px rgba(0,0,0,.35); }
+  /* 文章标题更醒目 */
+  #article-container h1, #article-container h2, #article-container h3 { font-weight: 700; }
+</style>
+<meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">38</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">95</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/cover1.svg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Welcome to PP' blog</span></a><a class="nav-page-title" href="/"><span class="site-name">接口工程化：参数过滤、数据验证与统一响应</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">接口工程化：参数过滤、数据验证与统一响应</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-11-14T01:30:00.000Z" title="发表于 2026-11-14 09:30:00">2026-11-14</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-11-15T02:51:15.052Z" title="更新于 2026-11-15 10:51:15">2026-11-15</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF/">技术</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>Node 全栈系列第三篇。上一篇的五个接口能跑通，但只能算”能用”——用户多传一个字段就能改主键，标题填空也能入库，四个路由里同样的判断抄了四遍。这篇解决三件事：<strong>收哪些字段、值合不合法、响应怎么统一</strong>。学完你会知道：为什么说”永远不要相信用户提交的数据”、白名单过滤挡的是什么攻击、验证为什么该写在模型里而不是路由里、<code>SequelizeValidationError</code> 怎么取出可读的错误信息、自定义错误类只做哪三件事、以及 <code>success</code>&#x2F;<code>failure</code> 两个函数怎么让每个路由瘦到三行。</p>
+</blockquote>
+<hr>
+<h2 id="一、过滤和验证是两道工序"><a href="#一、过滤和验证是两道工序" class="headerlink" title="一、过滤和验证是两道工序"></a>一、过滤和验证是两道工序</h2><p>先分清两件事，很多人会混：</p>
+<table>
+<thead>
+<tr>
+<th>工序</th>
+<th>管什么</th>
+<th>出问题的后果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>过滤</strong></td>
+<td>收不收这个<strong>字段</strong></td>
+<td>用户能改主键、改支付状态</td>
+</tr>
+<tr>
+<td><strong>验证</strong></td>
+<td>这个<strong>值</strong>能不能用</td>
+<td>数据库里堆满空标题、乱码</td>
+</tr>
+</tbody></table>
+<p><strong>过滤不等于验证。</strong> 把 <code>title</code> 取出来，不代表 <code>title</code> 是合法的。两道都要做。</p>
+<h3 id="1-1-一个真实的漏洞"><a href="#1-1-一个真实的漏洞" class="headerlink" title="1.1 一个真实的漏洞"></a>1.1 一个真实的漏洞</h3><p>上一篇的创建接口是这样写的：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> article = <span class="keyword">await</span> <span class="title class_">Article</span>.<span class="title function_">create</span>(req.<span class="property">body</span>)</span><br></pre></td></tr></table></figure>
+
+<p>看起来没问题，但用 Apifox 手动多传一个字段：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span> <span class="attr">&quot;title&quot;</span><span class="punctuation">:</span> <span class="string">&quot;新文章&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;content&quot;</span><span class="punctuation">:</span> <span class="string">&quot;正文&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;id&quot;</span><span class="punctuation">:</span> <span class="number">666</span> <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>提交后返回的 ID 就是 <strong>666</strong>，不是自增的 103。刷新数据库，这条记录真的插进去了，主键被用户指定了。</p>
+<p><strong>自增主键形同虚设。</strong></p>
+<p>这还算小问题。想象一张订单表：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>正常值</th>
+<th>用户能不能改</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>productId</code></td>
+<td>商品编号</td>
+<td>可以传</td>
+</tr>
+<tr>
+<td><code>paid</code></td>
+<td><code>false</code></td>
+<td><strong>也能传 <code>true</code></strong></td>
+</tr>
+</tbody></table>
+<p>用户找到下单接口地址，用工具调一次，手动加个 <code>paid: true</code>——<strong>没付钱，订单显示已支付</strong>。</p>
+<p>这就是”越权赋值”（Mass Assignment）。根源只有一句话：</p>
+<blockquote>
+<p><strong><code>req.body</code> 会接收用户发来的所有字段，你不筛选，它就全部入库。</strong></p>
+</blockquote>
+<h3 id="1-2-白名单过滤"><a href="#1-2-白名单过滤" class="headerlink" title="1.2 白名单过滤"></a>1.2 白名单过滤</h3><p>解法很简单：<strong>只取需要的字段，其余一概不管。</strong></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ❌ 全收</span></span><br><span class="line"><span class="keyword">await</span> <span class="title class_">Article</span>.<span class="title function_">create</span>(req.<span class="property">body</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">// ✅ 只取这两个</span></span><br><span class="line"><span class="keyword">const</span> &#123; title, content &#125; = req.<span class="property">body</span></span><br><span class="line"><span class="keyword">await</span> <span class="title class_">Article</span>.<span class="title function_">create</span>(&#123; title, content &#125;)</span><br></pre></td></tr></table></figure>
+
+<p>这叫<strong>白名单过滤</strong>（也叫强参数过滤）。名字的含义是：默认全部拒绝，只有名单上的字段才放行。</p>
+<p>再测一次，传 <code>id: 999</code>，返回的 ID 是自增的 667——<strong>用户传的 id 被丢弃了</strong>。</p>
+<blockquote>
+<p>注意和白名单&#x2F;黑名单的取舍：<strong>永远用白名单，不要用黑名单。</strong> 黑名单是”禁止 id、createdAt、paid…”，你永远列不全，模型加个新字段就漏了。白名单是”只允许 title、content”，加字段时必须显式加进去，天然安全。</p>
+</blockquote>
+<h3 id="1-3-抽成公共方法"><a href="#1-3-抽成公共方法" class="headerlink" title="1.3 抽成公共方法"></a>1.3 抽成公共方法</h3><p>创建和更新都要过滤，同样的代码写两遍不好维护。抽出来：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 白名单过滤：只保留 title、content，其余一律丢弃</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">pickBody</span>(<span class="params">body</span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> &#123;</span><br><span class="line">    <span class="attr">title</span>: body.<span class="property">title</span>,</span><br><span class="line">    <span class="attr">content</span>: body.<span class="property">content</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 创建</span></span><br><span class="line"><span class="keyword">const</span> body = <span class="title function_">pickBody</span>(req.<span class="property">body</span>)</span><br><span class="line"><span class="keyword">await</span> <span class="title class_">Article</span>.<span class="title function_">create</span>(body)</span><br><span class="line"></span><br><span class="line"><span class="comment">// 更新</span></span><br><span class="line"><span class="keyword">const</span> body = <span class="title function_">pickBody</span>(req.<span class="property">body</span>)</span><br><span class="line"><span class="keyword">await</span> article.<span class="title function_">update</span>(body)</span><br></pre></td></tr></table></figure>
+
+<p><strong>以后模型加字段，只改 <code>pickBody</code> 一处。</strong> 如果哪天新增了 <code>status</code> 字段需要允许用户设置，忘了加进白名单，接口就是静默不生效——这种”忘记”反而是安全的，比”忘记加进黑名单导致泄露”好得多。</p>
+<hr>
+<h2 id="二、验证：写在哪一层"><a href="#二、验证：写在哪一层" class="headerlink" title="二、验证：写在哪一层"></a>二、验证：写在哪一层</h2><h3 id="2-1-先看不管会怎样"><a href="#2-1-先看不管会怎样" class="headerlink" title="2.1 先看不管会怎样"></a>2.1 先看不管会怎样</h3><p>把 <code>title</code> 的值清空再提交，接口不报错，照样返回”创建成功”。刷新数据库，这条记录的标题是一片空白。</p>
+<p><strong>过滤管的是”收不收”，验证管的是”能不能用”。</strong> 两件事不能互相替代。</p>
+<h3 id="2-2-做法一：在路由里写-if"><a href="#2-2-做法一：在路由里写-if" class="headerlink" title="2.2 做法一：在路由里写 if"></a>2.2 做法一：在路由里写 if</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (body.<span class="property">title</span> === <span class="string">&#x27;&#x27;</span>) &#123;</span><br><span class="line">  <span class="keyword">return</span> res.<span class="title function_">status</span>(<span class="number">400</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">    <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">    <span class="attr">message</span>: <span class="string">&#x27;标题不能为空。&#x27;</span></span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>400 Bad Request</code> 表示”请求本身有问题”，参数无效、格式不对都用它。</p>
+<p>能跑，但字段一多就崩了：</p>
+<ul>
+<li>标题不能为空、长度 2–45</li>
+<li>内容不能为空、长度上限</li>
+<li>再加个分类 ID 必须存在、状态值必须在枚举里……</li>
+</ul>
+<p>路由里会堆出一大片 <code>if</code>，业务逻辑被淹掉。</p>
+<p>更麻烦的是：<strong>更新接口也要验证一遍</strong>，同样的规则抄两趟，改一处还得记得改另一处。忘了改，创建拦住了、更新没拦住，等于没做。</p>
+<h3 id="2-3-做法二：写进模型（推荐）"><a href="#2-3-做法二：写进模型（推荐）" class="headerlink" title="2.3 做法二：写进模型（推荐）"></a>2.3 做法二：写进模型（推荐）</h3><p>把规则写进 <code>models/article.js</code> 的字段定义：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="title class_">Article</span>.<span class="title function_">init</span>(&#123;</span><br><span class="line">  <span class="attr">title</span>: &#123;</span><br><span class="line">    <span class="attr">type</span>: <span class="title class_">DataTypes</span>.<span class="property">STRING</span>,</span><br><span class="line">    <span class="attr">allowNull</span>: <span class="literal">false</span>,</span><br><span class="line">    <span class="attr">validate</span>: &#123;</span><br><span class="line">      <span class="attr">notNull</span>: &#123; <span class="attr">msg</span>: <span class="string">&#x27;标题必须存在&#x27;</span> &#125;,      <span class="comment">// 压根没传这个字段</span></span><br><span class="line">      <span class="attr">notEmpty</span>: &#123; <span class="attr">msg</span>: <span class="string">&#x27;标题不能为空&#x27;</span> &#125;,     <span class="comment">// 传了，但值是空字符串</span></span><br><span class="line">      <span class="attr">len</span>: &#123;</span><br><span class="line">        <span class="attr">args</span>: [<span class="number">2</span>, <span class="number">45</span>],</span><br><span class="line">        <span class="attr">msg</span>: <span class="string">&#x27;标题的长度需要在 2-45 个字符之间&#x27;</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  <span class="attr">content</span>: <span class="title class_">DataTypes</span>.<span class="property">TEXT</span></span><br><span class="line">&#125;, &#123;</span><br><span class="line">  sequelize,</span><br><span class="line">  <span class="attr">modelName</span>: <span class="string">&#x27;Article&#x27;</span></span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>三个校验器各管一种情况：</p>
+<table>
+<thead>
+<tr>
+<th>校验器</th>
+<th>触发场景</th>
+<th>提示</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>notNull</code></td>
+<td>请求里<strong>没有</strong> <code>title</code> 字段</td>
+<td>标题必须存在</td>
+</tr>
+<tr>
+<td><code>notEmpty</code></td>
+<td>传了 <code>title</code>，但值是空串</td>
+<td>标题不能为空</td>
+</tr>
+<tr>
+<td><code>len</code></td>
+<td>长度不在 <code>[2, 45]</code> 区间</td>
+<td>长度需在 2-45 字符之间</td>
+</tr>
+</tbody></table>
+<p><code>notNull</code> 和 <code>notEmpty</code> 的区别值得记：一个管”字段存不存在”，一个管”值空不空”。只写 <code>notEmpty</code> 的话，用户完全不传 <code>title</code> 时不会触发——因为 <code>undefined</code> 不是空字符串。</p>
+<p><strong>写进模型的好处是创建和更新共用一套规则。</strong> 改一处，两边同时生效。</p>
+<p>Sequelize 还有一堆内置校验器，用到查文档就行：</p>
+<table>
+<thead>
+<tr>
+<th>校验器</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>isEmail</code></td>
+<td>邮箱格式</td>
+</tr>
+<tr>
+<td><code>isInt</code></td>
+<td>整数</td>
+</tr>
+<tr>
+<td><code>isIn</code></td>
+<td>值必须在数组里</td>
+</tr>
+<tr>
+<td><code>isUrl</code></td>
+<td>URL 格式</td>
+</tr>
+<tr>
+<td><code>len</code></td>
+<td>长度区间</td>
+</tr>
+</tbody></table>
+<h3 id="2-4-把错误返回给前端"><a href="#2-4-把错误返回给前端" class="headerlink" title="2.4 把错误返回给前端"></a>2.4 把错误返回给前端</h3><p>规则生效后，脏数据进不了库，但接口会直接抛异常。异常长这样：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SequelizeValidationError: Validation error: 标题不能为空</span><br></pre></td></tr></table></figure>
+
+<p>处理方式：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&#125; <span class="keyword">catch</span> (error) &#123;</span><br><span class="line">  <span class="keyword">if</span> (error.<span class="property">name</span> === <span class="string">&#x27;SequelizeValidationError&#x27;</span>) &#123;</span><br><span class="line">    <span class="comment">// 一个字段可能有多条错误，逐条取 message</span></span><br><span class="line">    <span class="keyword">const</span> messages = error.<span class="property">errors</span>.<span class="title function_">map</span>(<span class="function"><span class="params">item</span> =&gt;</span> item.<span class="property">message</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> res.<span class="title function_">status</span>(<span class="number">400</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">      <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">      <span class="attr">message</span>: messages</span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  res.<span class="title function_">status</span>(<span class="number">500</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">    <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">    <span class="attr">message</span>: <span class="string">&#x27;服务器错误。&#x27;</span></span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>三个要点：</p>
+<ol>
+<li><strong>靠 <code>error.name</code> 判断类型</strong>，值是 <code>&#39;SequelizeValidationError&#39;</code></li>
+<li><strong>真正的错误明细在 <code>error.errors</code> 数组里</strong>，一个字段可能对应多条（比如既为空又长度不够）</li>
+<li><strong>验证错误回 400，其他异常回 500</strong>——两类错误责任不同，前端处理方式也不同</li>
+</ol>
+<p>四种提交的返回：</p>
+<table>
+<thead>
+<tr>
+<th>提交内容</th>
+<th>返回</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>不带 <code>title</code> 字段</td>
+<td>标题必须存在</td>
+</tr>
+<tr>
+<td><code>title</code> 为空字符串</td>
+<td>标题不能为空</td>
+</tr>
+<tr>
+<td><code>title</code> 只填一个字符</td>
+<td>长度需在 2-45 字符之间</td>
+</tr>
+<tr>
+<td><code>title</code> 填 <code>Hello</code></td>
+<td>创建成功</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>⚠️ 调试时如果只看到一句 <code>Validation error</code> 看不出是哪个字段，在 <code>catch</code> 里先 <code>console.log(error.errors)</code> 打出来看一眼，结构清楚了再写处理逻辑。</p>
+</blockquote>
+<hr>
+<h2 id="三、重构：把重复的壳剥掉"><a href="#三、重构：把重复的壳剥掉" class="headerlink" title="三、重构：把重复的壳剥掉"></a>三、重构：把重复的壳剥掉</h2><h3 id="3-1-先数一下重复"><a href="#3-1-先数一下重复" class="headerlink" title="3.1 先数一下重复"></a>3.1 先数一下重复</h3><p>五个接口写完，代码里攒了三层重复：</p>
+<table>
+<thead>
+<tr>
+<th>重复的东西</th>
+<th>出现次数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查文章 + 判断是否存在</td>
+<td>4 次（详情、更新、删除、将来更多）</td>
+</tr>
+<tr>
+<td><code>res.json({ status, message, data })</code></td>
+<td>5 次</td>
+</tr>
+<tr>
+<td><code>res.status(500).json({...})</code></td>
+<td>5 次</td>
+</tr>
+</tbody></table>
+<p>改一处要改五处，这就是维护成本。原则只有一条：<strong>DRY（Don’t Repeat Yourself）</strong>——同样的逻辑只写一遍。</p>
+<h3 id="3-2-自定义错误类"><a href="#3-2-自定义错误类" class="headerlink" title="3.2 自定义错误类"></a>3.2 自定义错误类</h3><p>新建 <code>utils/response.js</code>，第一个成员：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">NotFoundError</span> <span class="keyword">extends</span> <span class="title class_ inherited__">Error</span> &#123;</span><br><span class="line">  <span class="title function_">constructor</span>(<span class="params">message</span>) &#123;</span><br><span class="line">    <span class="variable language_">super</span>(message)                  <span class="comment">// 交给父类保存 message</span></span><br><span class="line">    <span class="variable language_">this</span>.<span class="property">name</span> = <span class="string">&#x27;NotFoundError&#x27;</span>     <span class="comment">// 改名字，后面靠它区分</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>只做三件事：继承 <code>Error</code>、透传 <code>message</code>、改写 <code>name</code>。</strong> 不用搞复杂，够用就行。</p>
+<p>为什么要自定义？因为要区分”业务上找不到”和”程序出错了”。前者回 404，后者回 500。用 <code>name</code> 区分最省事。</p>
+<h3 id="3-3-抽出取数据的公共方法"><a href="#3-3-抽出取数据的公共方法" class="headerlink" title="3.3 抽出取数据的公共方法"></a>3.3 抽出取数据的公共方法</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">function</span> <span class="title function_">getArticle</span>(<span class="params">req</span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> &#123; id &#125; = req.<span class="property">params</span></span><br><span class="line">  <span class="keyword">const</span> article = <span class="keyword">await</span> <span class="title class_">Article</span>.<span class="title function_">findByPk</span>(id)</span><br><span class="line">  <span class="keyword">if</span> (!article) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">NotFoundError</span>(<span class="string">`ID 为 <span class="subst">$&#123;id&#125;</span> 的文章未找到`</span>)</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> article</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关键设计：<strong>找不到就抛异常，不要就地写响应。</strong></p>
+<p>为什么？因为”写响应”是路由的职责，”取数据”是方法的职责。方法里一旦写了 <code>res.json</code>，它就绑死在 HTTP 上了，将来别的地方想复用它（比如批量删除、后台脚本）就没法用。</p>
+<p>抛异常的好处是：谁调用谁决定怎么处理。路由交给全局错误处理，脚本自己 <code>catch</code>。</p>
+<h3 id="3-4-success：统一成功响应"><a href="#3-4-success：统一成功响应" class="headerlink" title="3.4 success：统一成功响应"></a>3.4 success：统一成功响应</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 请求成功</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &#123;<span class="type">Object</span>&#125; res     响应对象</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &#123;<span class="type">String</span>&#125; message 提示信息</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &#123;<span class="type">Object</span>&#125; data    返回数据</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &#123;<span class="type">Number</span>&#125; code    状态码，默认 200</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">function</span> <span class="title function_">success</span>(<span class="params">res, message, data = &#123;&#125;, code = <span class="number">200</span></span>) &#123;</span><br><span class="line">  res.<span class="title function_">status</span>(code).<span class="title function_">json</span>(&#123;</span><br><span class="line">    <span class="attr">status</span>: <span class="literal">true</span>,</span><br><span class="line">    message,</span><br><span class="line">    data</span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>code</code> 默认 200，创建文章时显式传 201：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_">success</span>(res, <span class="string">&#x27;创建文章成功。&#x27;</span>, &#123; article &#125;, <span class="number">201</span>)</span><br></pre></td></tr></table></figure>
+
+<p>删除时可以省掉 <code>data</code>，用默认的空对象。</p>
+<h3 id="3-5-failure：统一失败响应"><a href="#3-5-failure：统一失败响应" class="headerlink" title="3.5 failure：统一失败响应"></a>3.5 failure：统一失败响应</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">function</span> <span class="title function_">failure</span>(<span class="params">res, error</span>) &#123;</span><br><span class="line">  <span class="comment">// 1. 表单验证错误 → 400</span></span><br><span class="line">  <span class="keyword">if</span> (error.<span class="property">name</span> === <span class="string">&#x27;SequelizeValidationError&#x27;</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> errors = error.<span class="property">errors</span>.<span class="title function_">map</span>(<span class="function"><span class="params">item</span> =&gt;</span> item.<span class="property">message</span>)</span><br><span class="line">    <span class="keyword">return</span> res.<span class="title function_">status</span>(<span class="number">400</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">      <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">      <span class="attr">message</span>: <span class="string">&#x27;请求参数错误。&#x27;</span>,</span><br><span class="line">      errors</span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 2. 资源未找到 → 404</span></span><br><span class="line">  <span class="keyword">if</span> (error.<span class="property">name</span> === <span class="string">&#x27;NotFoundError&#x27;</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> res.<span class="title function_">status</span>(<span class="number">404</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">      <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">      <span class="attr">message</span>: error.<span class="property">message</span></span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 3. 其余一律 500</span></span><br><span class="line">  res.<span class="title function_">status</span>(<span class="number">500</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">    <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">    <span class="attr">message</span>: <span class="string">&#x27;服务器错误。&#x27;</span></span><br><span class="line">  &#125;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>按 <code>error.name</code> 分三个出口，覆盖绝大多数情况。将来要加新类型（比如 <code>UnauthorizedError</code> → 401），在这里加一个分支就行。</p>
+<p>导出三个成员：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">module</span>.<span class="property">exports</span> = &#123;</span><br><span class="line">  <span class="title class_">NotFoundError</span>,</span><br><span class="line">  success,</span><br><span class="line">  failure</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-6-改造前后的对比"><a href="#3-6-改造前后的对比" class="headerlink" title="3.6 改造前后的对比"></a>3.6 改造前后的对比</h3><p><strong>改造前</strong>，查详情接口 30 行：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">router.<span class="title function_">get</span>(<span class="string">&#x27;/:id&#x27;</span>, <span class="keyword">async</span> <span class="keyword">function</span> (<span class="params">req, res</span>) &#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; id &#125; = req.<span class="property">params</span></span><br><span class="line">    <span class="keyword">const</span> article = <span class="keyword">await</span> <span class="title class_">Article</span>.<span class="title function_">findByPk</span>(id)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!article) &#123;</span><br><span class="line">      <span class="keyword">return</span> res.<span class="title function_">status</span>(<span class="number">404</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">        <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">        <span class="attr">message</span>: <span class="string">&#x27;查询的文章不存在。&#x27;</span></span><br><span class="line">      &#125;)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    res.<span class="title function_">json</span>(&#123;</span><br><span class="line">      <span class="attr">status</span>: <span class="literal">true</span>,</span><br><span class="line">      <span class="attr">message</span>: <span class="string">&#x27;查询文章详情成功。&#x27;</span>,</span><br><span class="line">      <span class="attr">data</span>: &#123; article &#125;</span><br><span class="line">    &#125;)</span><br><span class="line">  &#125; <span class="keyword">catch</span> (error) &#123;</span><br><span class="line">    <span class="keyword">if</span> (error.<span class="property">name</span> === <span class="string">&#x27;SequelizeValidationError&#x27;</span>) &#123;</span><br><span class="line">      <span class="comment">// ...</span></span><br><span class="line">    &#125;</span><br><span class="line">    res.<span class="title function_">status</span>(<span class="number">500</span>).<span class="title function_">json</span>(&#123;</span><br><span class="line">      <span class="attr">status</span>: <span class="literal">false</span>,</span><br><span class="line">      <span class="attr">message</span>: <span class="string">&#x27;查询文章详情失败。&#x27;</span>,</span><br><span class="line">      <span class="attr">errors</span>: [error.<span class="property">message</span>]</span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p><strong>改造后</strong>，三行：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">router.<span class="title function_">get</span>(<span class="string">&#x27;/:id&#x27;</span>, <span class="title function_">async</span> (req, res) =&gt; &#123;</span><br><span class="line">  <span class="keyword">const</span> article = <span class="keyword">await</span> <span class="title function_">getArticle</span>(req)</span><br><span class="line">  <span class="title function_">success</span>(res, <span class="string">&#x27;查询文章详情成功。&#x27;</span>, &#123; article &#125;)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>错误不用管，异步错误会被中间件接住，交给 <code>failure</code>。</p>
+<blockquote>
+<p>Express 4 的 <code>async</code> 函数抛出的异常<strong>不会自动传给错误中间件</strong>。要么用 <code>express-async-errors</code> 这个包补上，要么每个路由手动 <code>try/catch</code>。这是 Express 4 的一个老问题，Express 5 已经修了。</p>
+</blockquote>
+<p>改造后的路由一眼能看出业务：<strong>取数据 → 返回</strong>。状态码、格式、错误处理全在别处。</p>
+<hr>
+<h2 id="四、期中复盘：把主线串一遍"><a href="#四、期中复盘：把主线串一遍" class="headerlink" title="四、期中复盘：把主线串一遍"></a>四、期中复盘：把主线串一遍</h2><p>前二十几回从环境一路做到接口，这里把主线重新串一次。</p>
+<h3 id="4-1-状态码分工"><a href="#4-1-状态码分工" class="headerlink" title="4.1 状态码分工"></a>4.1 状态码分工</h3><table>
+<thead>
+<tr>
+<th>状态码</th>
+<th>含义</th>
+<th>什么时候用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>200</code></td>
+<td>成功</td>
+<td>查询、更新、删除</td>
+</tr>
+<tr>
+<td><code>201</code></td>
+<td>创建成功</td>
+<td>新建资源</td>
+</tr>
+<tr>
+<td><code>400</code></td>
+<td>请求参数错误</td>
+<td>验证不通过</td>
+</tr>
+<tr>
+<td><code>404</code></td>
+<td>资源不存在</td>
+<td>ID 找不到</td>
+</tr>
+<tr>
+<td><code>500</code></td>
+<td>服务器错误</td>
+<td>其余所有异常</td>
+</tr>
+</tbody></table>
+<p><strong><code>400</code> 和 <code>500</code> 的区别是责任归属</strong>：400 是用户传错了，500 是服务器出问题了。前端看到 400 应该提示用户改输入，看到 500 应该提示”稍后重试”。</p>
+<h3 id="4-2-初始化顺序"><a href="#4-2-初始化顺序" class="headerlink" title="4.2 初始化顺序"></a>4.2 初始化顺序</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">npx express-generator --no-view clwy-api   <span class="comment"># 生成项目</span></span><br><span class="line"><span class="built_in">cd</span> clwy-api</span><br><span class="line">npm i                                       <span class="comment"># 装依赖</span></span><br><span class="line">npm i nodemon                               <span class="comment"># 自动重启</span></span><br><span class="line">npm i sequelize mysql2                      <span class="comment"># ORM + 驱动</span></span><br><span class="line">npx sequelize-cli init                      <span class="comment"># 初始化 ORM 结构</span></span><br><span class="line">npm start                                   <span class="comment"># 起服务</span></span><br></pre></td></tr></table></figure>
+
+<p>顺序固定，中间漏一步后面全报错。特别是 <code>config/config.json</code> 的连接信息——不改的话 <code>db:migrate</code> 连不上库。</p>
+<h3 id="4-3-路由的两级配置"><a href="#4-3-路由的两级配置" class="headerlink" title="4.3 路由的两级配置"></a>4.3 路由的两级配置</h3><p><strong>第一级在 <code>app.js</code></strong>，定前缀：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> articlesRouter = <span class="built_in">require</span>(<span class="string">&#x27;./routes/admin/articles&#x27;</span>)</span><br><span class="line">app.<span class="title function_">use</span>(<span class="string">&#x27;/admin/articles&#x27;</span>, articlesRouter)</span><br></pre></td></tr></table></figure>
+
+<p><strong>第二级在路由文件里</strong>，定具体路径：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">router.<span class="title function_">get</span>(<span class="string">&#x27;/&#x27;</span>, ...)        <span class="comment">// 实际是 /admin/articles</span></span><br><span class="line">router.<span class="title function_">get</span>(<span class="string">&#x27;/:id&#x27;</span>, ...)     <span class="comment">// 实际是 /admin/articles/:id</span></span><br></pre></td></tr></table></figure>
+
+<p>两级配合的好处是：改前缀只改一处，路由文件内部不用动。</p>
+<h3 id="4-4-PUT-和-PATCH"><a href="#4-4-PUT-和-PATCH" class="headerlink" title="4.4 PUT 和 PATCH"></a>4.4 PUT 和 PATCH</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>语义</th>
+<th>用不用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>PUT</code></td>
+<td>整体替换一份资源</td>
+<td>✅ 本项目用它</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td>只更新部分字段</td>
+<td>语义更细，但小程序支持有问题</td>
+</tr>
+</tbody></table>
+<p>严格来说”改个标题”应该用 <code>PATCH</code>。但现实里 <code>PATCH</code> 在小程序端支持不好，所以<strong>统一用 <code>PUT</code></strong> 更省事。这不是理论最优，是工程取舍。</p>
+<hr>
+<h2 id="五、速查表"><a href="#五、速查表" class="headerlink" title="五、速查表"></a>五、速查表</h2><h3 id="5-1-过滤与验证"><a href="#5-1-过滤与验证" class="headerlink" title="5.1 过滤与验证"></a>5.1 过滤与验证</h3><table>
+<thead>
+<tr>
+<th>目的</th>
+<th>做法</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>只收指定字段</td>
+<td>解构 &#x2F; <code>pickBody</code></td>
+<td>路由</td>
+</tr>
+<tr>
+<td>值必须存在</td>
+<td><code>notNull</code></td>
+<td>模型</td>
+</tr>
+<tr>
+<td>值不能为空串</td>
+<td><code>notEmpty</code></td>
+<td>模型</td>
+</tr>
+<tr>
+<td>长度限制</td>
+<td><code>len: { args: [2,45] }</code></td>
+<td>模型</td>
+</tr>
+<tr>
+<td>枚举限制</td>
+<td><code>isIn: [[&#39;a&#39;,&#39;b&#39;]]</code></td>
+<td>模型</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-统一响应"><a href="#5-2-统一响应" class="headerlink" title="5.2 统一响应"></a>5.2 统一响应</h3><table>
+<thead>
+<tr>
+<th>函数</th>
+<th>参数</th>
+<th>输出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>success</code></td>
+<td><code>(res, message, data, code=200)</code></td>
+<td><code>{ status: true, message, data }</code></td>
+</tr>
+<tr>
+<td><code>failure</code></td>
+<td><code>(res, error)</code></td>
+<td>按 <code>error.name</code> 分 400&#x2F;404&#x2F;500</td>
+</tr>
+</tbody></table>
+<h3 id="5-3-错误类型"><a href="#5-3-错误类型" class="headerlink" title="5.3 错误类型"></a>5.3 错误类型</h3><table>
+<thead>
+<tr>
+<th><code>error.name</code></th>
+<th>状态码</th>
+<th>触发</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SequelizeValidationError</code></td>
+<td>400</td>
+<td>模型验证失败</td>
+</tr>
+<tr>
+<td><code>NotFoundError</code></td>
+<td>404</td>
+<td>自定义，资源找不到</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>500</td>
+<td>未预料异常</td>
+</tr>
+</tbody></table>
+<h3 id="5-4-常用校验器"><a href="#5-4-常用校验器" class="headerlink" title="5.4 常用校验器"></a>5.4 常用校验器</h3><table>
+<thead>
+<tr>
+<th>校验器</th>
+<th>用途</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>notNull</code></td>
+<td>字段必须传</td>
+<td><code>{ msg: &#39;标题必须存在&#39; }</code></td>
+</tr>
+<tr>
+<td><code>notEmpty</code></td>
+<td>不能是空串</td>
+<td><code>{ msg: &#39;标题不能为空&#39; }</code></td>
+</tr>
+<tr>
+<td><code>len</code></td>
+<td>长度区间</td>
+<td><code>{ args: [2,45] }</code></td>
+</tr>
+<tr>
+<td><code>isEmail</code></td>
+<td>邮箱</td>
+<td><code>{ msg: &#39;邮箱格式不对&#39; }</code></td>
+</tr>
+<tr>
+<td><code>isIn</code></td>
+<td>枚举</td>
+<td><code>{ args: [[&#39;draft&#39;,&#39;published&#39;]] }</code></td>
+</tr>
+<tr>
+<td><code>isInt</code></td>
+<td>整数</td>
+<td><code>{ msg: &#39;必须是整数&#39; }</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>这篇的主干五条：</p>
+<ol>
+<li><strong>过滤和验证是两道工序</strong>：过滤决定收哪些字段（防越权），验证决定值能不能用（防脏数据），缺一不可</li>
+<li><strong>永远用白名单</strong>：默认全拒，只放行需要的字段。黑名单永远列不全，模型加个字段就漏</li>
+<li><strong>验证写进模型</strong>：创建和更新共用一套规则，路由里不再堆 <code>if</code>；<code>notNull</code> 管”没传”，<code>notEmpty</code> 管”传了但空”</li>
+<li><strong>错误处理抽成 <code>success</code> &#x2F; <code>failure</code></strong>：按 <code>error.name</code> 分流到 400&#x2F;404&#x2F;500，路由里不再出现重复的 <code>res.json</code></li>
+<li><strong>公共方法只管取数据</strong>：找不到就 <code>throw</code>，不要在里面写 <code>res.json</code>——写响应是路由的职责，方法要保持可复用</li>
+</ol>
+<p>下一篇开始真正的项目：设计一个课程平台的数据库（分类、课程、章节、用户、点赞、设置六张表），用 Workbench 画关系图，用迁移一次建完，然后照着模板批量生成后台接口。</p>
+<p><em>本文为 Node.js 全栈课程学习笔记整理，示例代码均在本地验证。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://quanpp.github.io">PP</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://quanpp.github.io/2026/11/14/Node%E5%85%A8%E6%A0%8803-%E6%8E%A5%E5%8F%A3%E5%B7%A5%E7%A8%8B%E5%8C%96/">https://quanpp.github.io/2026/11/14/Node%E5%85%A8%E6%A0%8803-%E6%8E%A5%E5%8F%A3%E5%B7%A5%E7%A8%8B%E5%8C%96/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://quanpp.github.io" target="_blank">Welcome to PP' blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Node-js/">Node.js</a><a class="post-meta__tags" href="/tags/Express/">Express</a><a class="post-meta__tags" href="/tags/%E5%90%8E%E7%AB%AF%E5%85%A5%E9%97%A8/">后端入门</a><a class="post-meta__tags" href="/tags/Sequelize/">Sequelize</a><a class="post-meta__tags" href="/tags/%E6%8E%A5%E5%8F%A3%E8%AE%BE%E8%AE%A1/">接口设计</a></div><div class="post-share"><div class="social-share" data-image="/img/cover1.svg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/11/14/Node%E5%85%A8%E6%A0%8804-%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%90%8E%E5%8F%B0%E6%8E%A5%E5%8F%A3/" title="数据库设计：从六张表到后台接口"><img class="cover" src="/img/cover2.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">数据库设计：从六张表到后台接口</div></div><div class="info-2"><div class="info-item-1">Node 全栈系列第四篇：六张表的关系设计、Workbench 画 ER 图、迁移建表与索引、后台接口的开发定式、bcryptjs 加密、belongsTo/hasMany 关联与孤儿记录、ECharts 统计接口。</div></div></div></a><a class="pagination-related" href="/2026/11/14/Node%E5%85%A8%E6%A0%8802-Sequelize%E4%B8%8EREST%E6%8E%A5%E5%8F%A3/" title="Sequelize 与 REST 接口：把增删改查写扎实"><img class="cover" src="/img/cover3.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Sequelize 与 REST 接口：把增删改查写扎实</div></div><div class="info-2"><div class="info-item-1">Node 全栈系列第二篇：ORM 是什么、模型与迁移与种子、RESTful 五个接口、三种取参方式、模糊搜索、分页，以及 Apifox 调试。</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/11/14/Node%E5%85%A8%E6%A0%8802-Sequelize%E4%B8%8EREST%E6%8E%A5%E5%8F%A3/" title="Sequelize 与 REST 接口：把增删改查写扎实"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-11-14</div><div class="info-item-2">Sequelize 与 REST 接口：把增删改查写扎实</div></div><div class="info-2"><div class="info-item-1">Node 全栈系列第二篇：ORM 是什么、模型与迁移与种子、RESTful 五个接口、三种取参方式、模糊搜索、分页，以及 Apifox 调试。</div></div></div></a><a class="pagination-related" href="/2026/11/14/Node%E5%85%A8%E6%A0%8801-%E8%B5%B7%E6%AD%A5-%E7%8E%AF%E5%A2%83%E4%B8%8ESQL%E5%9F%BA%E7%A1%80/" title="Node.js 全栈起步：从环境搭建到 SQL 基础"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-11-14</div><div class="info-item-2">Node.js 全栈起步：从环境搭建到 SQL 基础</div></div><div class="info-2"><div class="info-item-1">Node 全栈系列第一篇：为什么后端选 Node、NVM 装环境、express-generator 起项目、req/res/next、Docker 跑 MySQL、建库建表与增删改查四件事。</div></div></div></a><a class="pagination-related" href="/2026/11/14/Node%E5%85%A8%E6%A0%8804-%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%90%8E%E5%8F%B0%E6%8E%A5%E5%8F%A3/" title="数据库设计：从六张表到后台接口"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-11-14</div><div class="info-item-2">数据库设计：从六张表到后台接口</div></div><div class="info-2"><div class="info-item-1">Node 全栈系列第四篇：六张表的关系设计、Workbench 画 ER 图、迁移建表与索引、后台接口的开发定式、bcryptjs 加密、belongsTo/hasMany 关联与孤儿记录、ECharts 统计接口。</div></div></div></a><a class="pagination-related" href="/2026/11/14/Node%E5%85%A8%E6%A0%8805-JWT%E4%B8%8E%E5%89%8D%E5%8F%B0%E6%8E%A5%E5%8F%A3/" title="JWT 认证与前台接口：一个完整的双端 API"><img class="cover" src="/img/cover3.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-11-14</div><div class="info-item-2">JWT 认证与前台接口：一个完整的双端 API</div></div><div class="info-2"><div class="info-item-1">Node 全栈系列第五篇：登录七步流程、Op.or 查账号、bcrypt 比对、JWT 签发与验证、认证中间件、前台首页与详情接口、多级关联、多对多点赞与 getLikeCourses。</div></div></div></a><a class="pagination-related" href="/2026/10/12/Node.js%20%E5%85%A5%E9%97%A8/" title="Node.js 入门：从运行环境到模块化与 npm"><img class="cover" src="/img/cover2.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-12</div><div class="info-item-2">Node.js 入门：从运行环境到模块化与 npm</div></div><div class="info-2"><div class="info-item-1">Node.js 入门笔记：什么是 Node.js、fs/path/http 内置模块、CommonJS 与 ESM 模块化语法、npm 包管理、nodemon 自动重启，附常用命令速查。</div></div></div></a><a class="pagination-related" href="/2026/11/14/Node%E5%85%A8%E6%A0%8806-%E8%B7%A8%E5%9F%9F%E4%B8%8E%E4%B8%8A%E7%BA%BF%E9%83%A8%E7%BD%B2/" title="从跨域到上线：把 Node 项目跑到互联网上"><img class="cover" src="/img/cover1.svg" alt="cover"><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-11-14</div><div class="info-item-2">从跨域到上线：把 Node 项目跑到互联网上</div></div><div class="info-2"><div class="info-item-1">Node 全栈系列最后一篇：同源策略与 CORS 三种解法、上线前的配置收尾、服务器与域名选购、SSH 密钥登录、宝塔面板、PM2 部署与 HTTPS。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/naiwa.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">PP</div><div class="author-info-description">记录技术、生活与思考</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">38</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">95</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">6</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/quanpp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/quanpp" target="_blank" title="GitHub"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客，记录成长与思考。</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E8%BF%87%E6%BB%A4%E5%92%8C%E9%AA%8C%E8%AF%81%E6%98%AF%E4%B8%A4%E9%81%93%E5%B7%A5%E5%BA%8F"><span class="toc-number">1.</span> <span class="toc-text">一、过滤和验证是两道工序</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E4%B8%80%E4%B8%AA%E7%9C%9F%E5%AE%9E%E7%9A%84%E6%BC%8F%E6%B4%9E"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 一个真实的漏洞</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E7%99%BD%E5%90%8D%E5%8D%95%E8%BF%87%E6%BB%A4"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 白名单过滤</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-%E6%8A%BD%E6%88%90%E5%85%AC%E5%85%B1%E6%96%B9%E6%B3%95"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 抽成公共方法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E9%AA%8C%E8%AF%81%EF%BC%9A%E5%86%99%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82"><span class="toc-number">2.</span> <span class="toc-text">二、验证：写在哪一层</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E5%85%88%E7%9C%8B%E4%B8%8D%E7%AE%A1%E4%BC%9A%E6%80%8E%E6%A0%B7"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 先看不管会怎样</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E5%81%9A%E6%B3%95%E4%B8%80%EF%BC%9A%E5%9C%A8%E8%B7%AF%E7%94%B1%E9%87%8C%E5%86%99-if"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 做法一：在路由里写 if</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E5%81%9A%E6%B3%95%E4%BA%8C%EF%BC%9A%E5%86%99%E8%BF%9B%E6%A8%A1%E5%9E%8B%EF%BC%88%E6%8E%A8%E8%8D%90%EF%BC%89"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 做法二：写进模型（推荐）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E6%8A%8A%E9%94%99%E8%AF%AF%E8%BF%94%E5%9B%9E%E7%BB%99%E5%89%8D%E7%AB%AF"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 把错误返回给前端</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E9%87%8D%E6%9E%84%EF%BC%9A%E6%8A%8A%E9%87%8D%E5%A4%8D%E7%9A%84%E5%A3%B3%E5%89%A5%E6%8E%89"><span class="toc-number">3.</span> <span class="toc-text">三、重构：把重复的壳剥掉</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%85%88%E6%95%B0%E4%B8%80%E4%B8%8B%E9%87%8D%E5%A4%8D"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 先数一下重复</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E8%87%AA%E5%AE%9A%E4%B9%89%E9%94%99%E8%AF%AF%E7%B1%BB"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 自定义错误类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E6%8A%BD%E5%87%BA%E5%8F%96%E6%95%B0%E6%8D%AE%E7%9A%84%E5%85%AC%E5%85%B1%E6%96%B9%E6%B3%95"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 抽出取数据的公共方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-success%EF%BC%9A%E7%BB%9F%E4%B8%80%E6%88%90%E5%8A%9F%E5%93%8D%E5%BA%94"><span class="toc-number">3.4.</span> <span class="toc-text">3.4 success：统一成功响应</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-failure%EF%BC%9A%E7%BB%9F%E4%B8%80%E5%A4%B1%E8%B4%A5%E5%93%8D%E5%BA%94"><span class="toc-number">3.5.</span> <span class="toc-text">3.5 failure：统一失败响应</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-6-%E6%94%B9%E9%80%A0%E5%89%8D%E5%90%8E%E7%9A%84%E5%AF%B9%E6%AF%94"><span class="toc-number">3.6.</span> <span class="toc-text">3.6 改造前后的对比</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E6%9C%9F%E4%B8%AD%E5%A4%8D%E7%9B%98%EF%BC%9A%E6%8A%8A%E4%B8%BB%E7%BA%BF%E4%B8%B2%E4%B8%80%E9%81%8D"><span class="toc-number">4.</span> <span class="toc-text">四、期中复盘：把主线串一遍</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E7%8A%B6%E6%80%81%E7%A0%81%E5%88%86%E5%B7%A5"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 状态码分工</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E5%88%9D%E5%A7%8B%E5%8C%96%E9%A1%BA%E5%BA%8F"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 初始化顺序</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E8%B7%AF%E7%94%B1%E7%9A%84%E4%B8%A4%E7%BA%A7%E9%85%8D%E7%BD%AE"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 路由的两级配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-PUT-%E5%92%8C-PATCH"><span class="toc-number">4.4.</span> <span class="toc-text">4.4 PUT 和 PATCH</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="toc-number">5.</span> <span class="toc-text">五、速查表</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E8%BF%87%E6%BB%A4%E4%B8%8E%E9%AA%8C%E8%AF%81"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 过滤与验证</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E7%BB%9F%E4%B8%80%E5%93%8D%E5%BA%94"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 统一响应</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E9%94%99%E8%AF%AF%E7%B1%BB%E5%9E%8B"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 错误类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E5%B8%B8%E7%94%A8%E6%A0%A1%E9%AA%8C%E5%99%A8"><span class="toc-number">5.4.</span> <span class="toc-text">5.4 常用校验器</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2026/11/14/Node%E5%85%A8%E6%A0%8806-%E8%B7%A8%E5%9F%9F%E4%B8%8E%E4%B8%8A%E7%BA%BF%E9%83%A8%E7%BD%B2/" title="从跨域到上线：把 Node 项目跑到互联网上"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="从跨域到上线：把 Node 项目跑到互联网上"/></a><div class="content"><a class="title" href="/2026/11/14/Node%E5%85%A8%E6%A0%8806-%E8%B7%A8%E5%9F%9F%E4%B8%8E%E4%B8%8A%E7%BA%BF%E9%83%A8%E7%BD%B2/" title="从跨域到上线：把 Node 项目跑到互联网上">从跨域到上线：把 Node 项目跑到互联网上</a><time datetime="2026-11-14T02:15:00.000Z" title="发表于 2026-11-14 10:15:00">2026-11-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/11/14/Node%E5%85%A8%E6%A0%8805-JWT%E4%B8%8E%E5%89%8D%E5%8F%B0%E6%8E%A5%E5%8F%A3/" title="JWT 认证与前台接口：一个完整的双端 API"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="JWT 认证与前台接口：一个完整的双端 API"/></a><div class="content"><a class="title" href="/2026/11/14/Node%E5%85%A8%E6%A0%8805-JWT%E4%B8%8E%E5%89%8D%E5%8F%B0%E6%8E%A5%E5%8F%A3/" title="JWT 认证与前台接口：一个完整的双端 API">JWT 认证与前台接口：一个完整的双端 API</a><time datetime="2026-11-14T02:00:00.000Z" title="发表于 2026-11-14 10:00:00">2026-11-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/11/14/Node%E5%85%A8%E6%A0%8804-%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%90%8E%E5%8F%B0%E6%8E%A5%E5%8F%A3/" title="数据库设计：从六张表到后台接口"><img src="/img/cover2.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="数据库设计：从六张表到后台接口"/></a><div class="content"><a class="title" href="/2026/11/14/Node%E5%85%A8%E6%A0%8804-%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%90%8E%E5%8F%B0%E6%8E%A5%E5%8F%A3/" title="数据库设计：从六张表到后台接口">数据库设计：从六张表到后台接口</a><time datetime="2026-11-14T01:45:00.000Z" title="发表于 2026-11-14 09:45:00">2026-11-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/11/14/Node%E5%85%A8%E6%A0%8803-%E6%8E%A5%E5%8F%A3%E5%B7%A5%E7%A8%8B%E5%8C%96/" title="接口工程化：参数过滤、数据验证与统一响应"><img src="/img/cover1.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="接口工程化：参数过滤、数据验证与统一响应"/></a><div class="content"><a class="title" href="/2026/11/14/Node%E5%85%A8%E6%A0%8803-%E6%8E%A5%E5%8F%A3%E5%B7%A5%E7%A8%8B%E5%8C%96/" title="接口工程化：参数过滤、数据验证与统一响应">接口工程化：参数过滤、数据验证与统一响应</a><time datetime="2026-11-14T01:30:00.000Z" title="发表于 2026-11-14 09:30:00">2026-11-14</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2026/11/14/Node%E5%85%A8%E6%A0%8802-Sequelize%E4%B8%8EREST%E6%8E%A5%E5%8F%A3/" title="Sequelize 与 REST 接口：把增删改查写扎实"><img src="/img/cover3.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Sequelize 与 REST 接口：把增删改查写扎实"/></a><div class="content"><a class="title" href="/2026/11/14/Node%E5%85%A8%E6%A0%8802-Sequelize%E4%B8%8EREST%E6%8E%A5%E5%8F%A3/" title="Sequelize 与 REST 接口：把增删改查写扎实">Sequelize 与 REST 接口：把增删改查写扎实</a><time datetime="2026-11-14T01:15:00.000Z" title="发表于 2026-11-14 09:15:00">2026-11-14</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By PP</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
